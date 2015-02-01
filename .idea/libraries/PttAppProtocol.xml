@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="PttAppProtocol">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/../PttAppProtocol/out/artifacts/PttAppProtocol_jar/PttAppProtocol.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
