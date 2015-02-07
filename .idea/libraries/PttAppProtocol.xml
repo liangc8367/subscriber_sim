@@ -4,6 +4,8 @@
       <root url="jar://$PROJECT_DIR$/../PttAppProtocol/out/artifacts/PttAppProtocol_jar/PttAppProtocol.jar!/" />
     </CLASSES>
     <JAVADOC />
-    <SOURCES />
+    <SOURCES>
+      <root url="file://$PROJECT_DIR$/../PttAppProtocol/src" />
+    </SOURCES>
   </library>
 </component>

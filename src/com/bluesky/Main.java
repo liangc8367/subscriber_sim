@@ -1,7 +1,9 @@
 package com.bluesky;
 
 import com.bluesky.common.UDPService;
-import com.bluesky.common.GlobalConstants;
+import com.bluesky.core.Subscriber;
+import com.bluesky.stubs.MicSim;
+import com.bluesky.stubs.SpkrSim;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.ExecutorService;
@@ -35,10 +37,15 @@ public class Main {
         udpSvc.startService();
 
         ExecutorService executor = Executors.newSingleThreadExecutor();
-        SubscriberSimulator.Configuration config = new SubscriberSimulator.Configuration();
+        Subscriber.Configuration config = new Subscriber.Configuration();
         config.mSuid = suid;
 
-        SubscriberSimulator su = new SubscriberSimulator(executor, config);
+
+        DataSource mic = new MicSim();
+        DataSink spkr = new SpkrSim();
+        //UDPService udpService, OLog logger
+
+        Subscriber su = new Subscriber(config, executor, mic, spkr, udpSvc, logger);
         su.start();
 
         try {
