@@ -26,7 +26,7 @@ public class Subscriber {
         mSpkr = spkr;
         mUdpSvc = udpService;
         mLogger = logger;
-        mExecCtx = new SubscriberExecContext(this, exec, mLogger);
+        mExecCtx = new SubscriberExecContext(this, exec,mUdpSvc, mLogger);
         initializeSM();
     }
 

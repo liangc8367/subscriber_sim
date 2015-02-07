@@ -1,5 +1,6 @@
 package com.bluesky;
 
+import com.bluesky.common.GlobalConstants;
 import com.bluesky.common.UDPService;
 import com.bluesky.common.XLog;
 import com.bluesky.core.Subscriber;
@@ -17,6 +18,7 @@ public class Main {
      * @param args
      */
     public static void main(String[] args) {
+        System.out.println("Subscriber simulator.");
         if( args.length != 1){
             System.err.println("syntax: simulator [suid]");
             System.exit(-1);
@@ -34,8 +36,20 @@ public class Main {
 
         UDPService.Configuration udpSvcConfig = new UDPService.Configuration();
         udpSvcConfig.addrLocal = new InetSocketAddress(0); //any local port
+        udpSvcConfig.addrRemote = new InetSocketAddress(
+                GlobalConstants.TRUNK_CENTER_ADDR,
+                GlobalConstants.TRUNK_CENTER_PORT
+                );
+        udpSvcConfig.clientMode = true;
         UDPService udpSvc = new UDPService(udpSvcConfig, logger);
         udpSvc.startService();
+
+        try {
+            Thread.currentThread().sleep(1000); //
+        }catch (InterruptedException e){
+            System.out.println("Interrupted " + e);
+            System.exit(-2);
+        }
 
         ExecutorService executor = Executors.newSingleThreadExecutor();
         Subscriber.Configuration config = new Subscriber.Configuration();
