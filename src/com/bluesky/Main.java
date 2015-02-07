@@ -1,6 +1,7 @@
 package com.bluesky;
 
 import com.bluesky.common.UDPService;
+import com.bluesky.common.XLog;
 import com.bluesky.core.Subscriber;
 import com.bluesky.stubs.MicSim;
 import com.bluesky.stubs.SpkrSim;
