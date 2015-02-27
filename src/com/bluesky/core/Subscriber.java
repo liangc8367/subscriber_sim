@@ -155,7 +155,8 @@ public class Subscriber {
         RX,
         HANG,
         TX,
-        TXINIT
+        TXINIT,
+        TXSTOPPING,
     }
 
     private class StateNode {
@@ -166,6 +167,7 @@ public class Subscriber {
         public void packetReceived(DatagramPacket packet){}
         public void rxEnd(){}
         public void txEnd(){}
+        public void micDataAvailable(ByteBuffer compressedAudio){}
     }
 
     /** initial/offline state, start registration process
@@ -219,10 +221,10 @@ public class Subscriber {
 
 
     /** online state, idle
-     *  - ptt pressed: transite to call init state
-     *  - pkt rxed, callInit: transite to call rxing state
-     *  - ptk rxed, callData: transite to call rxing state
-     *  - pkt rxed, callTerm, transite to call hang state
+     *  - ptt pressed: transit to call init state
+     *  - pkt rxed, callInit: transit to call rxing state
+     *  - ptk rxed, callData: transit to call rxing state
+     *  - pkt rxed, callTerm, transit to call hang state
      *
      *  - keepalive timer
      *
@@ -304,7 +306,7 @@ public class Subscriber {
      *  - callInit: ignore
      *  - callData: offer to spkr module
      *  - callTerm: offer to spkr module
-     *  - rxEnd: transite to call hang
+     *  - rxEnd: transit to call hang
      *
      */
     private class StateRxing extends StateNode {
@@ -355,7 +357,7 @@ public class Subscriber {
      *  - callTerm: remain in call hang (trunking mgr should broadcase callTerm during this period)
      *  - callData: validate, and to call rxing
      *  - ptt: to callInit
-     *  - timeout: to idle/online
+     *  - timeout: to idle/online (after last hang period following last callTerm)
      */
     private class StateHang extends StateNode {
 
@@ -421,7 +423,7 @@ public class Subscriber {
 
     /**
      * call init state:
-     * - callInit: from myself, kept sending callInit until 3 callInit, and then transite to callTxing
+     * - callInit: from myself, kept sending callInit until 3 callInit, and then transit to callTxing
      * - callInit: from others, to callRxing
      * - callTerm: to callhang
      * - callData: from others, to callRxing
@@ -431,13 +433,167 @@ public class Subscriber {
         @Override
         public void entry() {
             mLogger.d(TAG, "enter call init");
+            mFirstPktTime = System.nanoTime();
             sendCallInit();
-            mInitCount = 1;
+            mFirstPktSeqNumber = mSeqNumber;
+            armTxTimer();
+            mbChannelGranted = false;
         }
 
         @Override
         public void exit() {
             mLogger.d(TAG, "exit call init");
+            if( mTxTimer != null){
+                mTxTimer.cancel();
+                mTxTimer = null;
+            }
+        }
+
+        @Override
+        public void packetReceived(DatagramPacket packet) {
+            mLogger.d(TAG, "rxed: " + ProtocolHelpers.peepProtocol(packet));
+            //TODO: to validate packet source and seq
+            // validate target/src
+            ProtocolBase proto = ProtocolFactory.getProtocol(packet);
+            switch( proto.getType()){
+                case ProtocolBase.PTYPE_CALL_INIT:
+                    CallInit callInit = (CallInit) proto;
+                    if( callInit.getSource() == mConfig.mSuid ){
+                        mLogger.d(TAG, "rxed callInit, initiated from myself");
+                        mbChannelGranted = true;
+                    } else {
+                        mLogger.d(TAG, "rxed callInit from other");
+                        mState = State.RX;
+                    }
+                    break;
+                case ProtocolBase.PTYPE_CALL_DATA:
+                    //TODO: validate
+                    mLogger.d(TAG, "rxed callData");
+                    mSpkr.offerData(((CallData) proto).getAudioData(), proto.getSequence());
+                    mState = State.RX;
+                    break;
+                case ProtocolBase.PTYPE_CALL_TERM:
+                    mLogger.d(TAG, "rxed callTerm");
+                    mState = State.HANG;
+                    break;
+            }
+        }
+
+        @Override
+        public void timerExpired(NamedTimerTask timerTask) {
+            if( timerTask == mTxTimer){
+                int numSent = mSeqNumber - mFirstPktSeqNumber;
+                if( numSent >= 3 ){
+                    mLogger.d(TAG, "we've sent " + numSent +" callInit" + ", channel granted=" + mbChannelGranted);
+                    if( mbChannelGranted ){
+                        mState = State.TX;
+                    } else {
+                        mState = State.ONLINE;
+                    }
+                } else {
+                    mLogger.d(TAG, "tx timer timed out, " + numSent);
+                    sendCallInit();
+                    rearmTxTimer();
+                }
+            }
+        }
+
+        private void armTxTimer(){
+            long timeNow = System.nanoTime();
+            mTxTimer = mExecCtx.createTimerTask();
+            long delay = GlobalConstants.CALL_PACKET_INTERVAL* (mSeqNumber - mFirstPktSeqNumber) - (int)((timeNow - mFirstPktTime)/(1000*1000));
+            if(delay < 0) {
+                mLogger.w(TAG, "negative delay:" + delay);
+            }
+            mExecCtx.schedule(mTxTimer, delay);
+        }
+
+        private void rearmTxTimer(){
+            if(mTxTimer !=null){
+                mTxTimer.cancel();
+            }
+            armTxTimer();
+        }
+
+        private NamedTimerTask mTxTimer;
+        private boolean mbChannelGranted;
+    }
+
+    /** call Txing state
+     *  - on data available: sent data
+     *  - ptt release: stop tx, and transit to TxStopping
+     *  - txEnd: tx stopped prior to ptt release: call hang
+     */
+    private class StateTxing extends StateNode {
+        @Override
+        public void entry() {
+            mLogger.d(TAG, "enter txing");
+            mMic.start();
+        }
+
+        @Override
+        public void exit() {
+            mLogger.d(TAG, "exit txing");
+            mMic.stop();
+        }
+
+        @Override
+        public void ptt(boolean pressed) {
+            if( !pressed ){
+                mLogger.d(TAG, "ptt released");
+                mState = State.TXSTOPPING;
+            }
+        }
+
+        @Override
+        public void txEnd() {
+            mLogger.d(TAG, "tx end prior to ptt released");
+            mState = State.HANG;
+        }
+
+        @Override
+        public void micDataAvailable(ByteBuffer compressedAudio){
+            sendCallData(compressedAudio);
+        }
+    }
+
+
+    /** tx stopping state
+     *  - send 3 call term, in 20ms interval, and transit to call hang
+     *  - callInit: to rx
+     *  - callData: to rx
+     *  - callTerm: to callhang
+     */
+    private class StateTxStopping extends StateNode {
+        @Override
+        public void entry() {
+            mLogger.d(TAG, "enter tx stopping");
+            mLastPktSeqNumber = mSeqNumber;
+            armTxTimer();
+        }
+
+        @Override
+        public void exit() {
+            mLogger.d(TAG, "exit tx stopping");
+            if( mTxTimer != null){
+                mTxTimer.cancel();
+                mTxTimer = null;
+            }
+        }
+
+        @Override
+        public void timerExpired(NamedTimerTask timerTask) {
+            if( timerTask == mTxTimer){
+                sendCallTerm();
+                int numSent = mSeqNumber - mLastPktSeqNumber;
+                if( numSent >= 3 ){
+                    mLogger.d(TAG, "we've sent " + numSent +" callTerm");
+                    mState = State.HANG;
+                } else {
+                    mLogger.d(TAG, "tx timer timed out, " + numSent);
+                    rearmTxTimer();
+                }
+            }
         }
 
         @Override
@@ -458,51 +614,47 @@ public class Subscriber {
                     break;
                 case ProtocolBase.PTYPE_CALL_TERM:
                     mLogger.d(TAG, "rxed callTerm");
-                    mCallHangGuardTimer.cancel();
-                    mCallHangGuardTimer = mExecCtx.createTimerTask();
-                    mExecCtx.schedule(mCallHangGuardTimer, GlobalConstants.CALL_HANG_PERIOD);
+                    CallTerm callTerm = (CallTerm) proto;
+                    if( callTerm.getSource() == mConfig.mSuid ){
+                        //ignore
+                    } else {
+                        mState = State.HANG;
+                    }
                     break;
             }
         }
 
-        private int mInitCount = 0;
-    }
-
-    private class StateTxing extends StateNode {
-        @Override
-        public void entry() {
-            super.entry();
-        }
-
-        @Override
-        public void exit() {
-            super.exit();
-        }
-
-        @Override
-        public void ptt(boolean pressed) {
-            super.ptt(pressed);
-        }
-
-        @Override
-        public void timerExpired(NamedTimerTask timerTask) {
-            super.timerExpired(timerTask);
-        }
-
-        @Override
-        public void packetReceived(DatagramPacket packet) {
-            super.packetReceived(packet);
-        }
-
-        @Override
-        public void rxEnd() {
-            super.rxEnd();
-        }
-
         @Override
         public void txEnd() {
-            super.txEnd();
+            mLogger.d(TAG, "tx end");
         }
+
+        private void armTxTimer(){
+            long timeNow = System.nanoTime();
+            mTxTimer = mExecCtx.createTimerTask();
+            long delay = GlobalConstants.CALL_PACKET_INTERVAL* (mLastPktSeqNumber + 1 - mFirstPktSeqNumber)
+                                    - (int)((timeNow - mFirstPktTime)/(1000*1000));
+            if(delay < 0) {
+                mLogger.w(TAG, "negative delay:" + delay);
+            }
+            mExecCtx.schedule(mTxTimer, delay);
+        }
+
+        private void rearmTxTimer(){
+            if(mTxTimer !=null){
+                mTxTimer.cancel();
+            }
+            long timeNow = System.nanoTime();
+            mTxTimer = mExecCtx.createTimerTask();
+            long delay = GlobalConstants.CALL_PACKET_INTERVAL* (mSeqNumber - mFirstPktSeqNumber)
+                    - (int)((timeNow - mFirstPktTime)/(1000*1000));
+            if(delay < 0) {
+                mLogger.w(TAG, "negative delay:" + delay);
+            }
+            mExecCtx.schedule(mTxTimer, delay);
+        }
+
+        private NamedTimerTask mTxTimer;
     }
 
     private void initializeSM(){
@@ -519,12 +671,16 @@ public class Subscriber {
         mStateMap.put(State.TXINIT, aState);
         aState = new StateTxing();
         mStateMap.put(State.TX, aState);
+        aState = new StateTxStopping();
+        mStateMap.put(State.TXSTOPPING, aState);
 
         mState = State.OFFLINE;
         mStateNode = mStateMap.get(mState);
     }
 
     private short mSeqNumber = 0;
+    private short mFirstPktSeqNumber, mLastPktSeqNumber;
+    private long mFirstPktTime;
     private State   mState, mStateOrig;
     private StateNode mStateNode;
     private final EnumMap<State, StateNode> mStateMap = new EnumMap<State, StateNode>(State.class);
