@@ -6,6 +6,7 @@ import com.bluesky.common.UDPService;
 import com.bluesky.core.Subscriber;
 
 import java.net.DatagramPacket;
+import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -56,6 +57,11 @@ public class SubscriberExecContext {
             }
         };
     }
+
+    public void schedule(TimerTask timerTask, long delayMs){
+
+    }
+
 
     private static class EvPacketRxed extends EventTrigger{
         public EvPacketRxed(DatagramPacket packet, final Subscriber sub){
