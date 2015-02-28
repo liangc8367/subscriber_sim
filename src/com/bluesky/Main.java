@@ -60,8 +60,8 @@ public class Main {
         DataSink spkr = new SpkrSim();
         //UDPService udpService, OLog logger
 
-        Subscriber su = new Subscriber(config, executor, mic, spkr, udpSvc, logger);
-        su.start();
+//        Subscriber su = new Subscriber(config, executor, mic, spkr, udpSvc, logger);
+//        su.start();
 
         try {
             while (true) {
@@ -71,7 +71,7 @@ public class Main {
             System.out.println("Interrupted " + e);
         }
 
-        su.stop();
+//        su.stop();
         udpSvc.stopService();
     }
 }

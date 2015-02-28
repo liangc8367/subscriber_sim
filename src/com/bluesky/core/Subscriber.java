@@ -35,13 +35,13 @@ public class Subscriber {
         public void stateChanged(State newState);
     }
 
-    public Subscriber(Configuration config, ExecutorService exec, DataSource mic, DataSink spkr, UDPService udpService, OLog logger){
+    public Subscriber(Configuration config, SubscriberExecContext execCtx, /*ExecutorService exec,*/ DataSource mic, DataSink spkr, UDPService udpService, OLog logger){
         mConfig = config;
         mMic = mic;
         mSpkr = spkr;
         mUdpSvc = udpService;
         mLogger = logger;
-        mExecCtx = new SubscriberExecContext(this, exec,mUdpSvc, mLogger);
+        mExecCtx = execCtx; //new SubscriberExecContext(this, exec,mUdpSvc, mLogger);
         initializeSM();
     }
 
