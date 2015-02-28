@@ -21,6 +21,20 @@ public class Subscriber {
         public long mTgtid;
     }
 
+    public static enum State {
+        OFFLINE,
+        ONLINE,
+        RX,
+        HANG,
+        TX,
+        TXINIT,
+        TXSTOPPING,
+    }
+
+    public interface SubscriberStateListener {
+        public void stateChanged(State newState);
+    }
+
     public Subscriber(Configuration config, ExecutorService exec, DataSource mic, DataSink spkr, UDPService udpService, OLog logger){
         mConfig = config;
         mMic = mic;
@@ -37,6 +51,10 @@ public class Subscriber {
 
     public void stop(){
 
+    }
+
+    public void registerStateListener( SubscriberStateListener listener){
+        mStateListener = listener;
     }
 
     /**
@@ -87,6 +105,9 @@ public class Subscriber {
             mStateNode.exit();
             mStateNode = mStateMap.get(mState);
             mStateNode.entry();
+            if(mStateListener != null){
+                mStateListener.stateChanged(mState);
+            }
         }
     }
 
@@ -143,22 +164,13 @@ public class Subscriber {
     private final UDPService mUdpSvc;
     private final OLog mLogger;
     private final SubscriberExecContext mExecCtx;
+    private SubscriberStateListener mStateListener = null;
 
 
 //    final Timer mTimer = new Timer("SuTm");
 
 
     /** private methods and members */
-    private enum State {
-        OFFLINE,
-        ONLINE,
-        RX,
-        HANG,
-        TX,
-        TXINIT,
-        TXSTOPPING,
-    }
-
     private class StateNode {
         public void entry(){};
         public void exit(){};
