@@ -237,6 +237,7 @@ public class Subscriber {
      *  - pkt rxed, callInit: transit to call rxing state
      *  - ptk rxed, callData: transit to call rxing state
      *  - pkt rxed, callTerm, transit to call hang state
+     *  - ptt: to TxInit
      *
      *  - keepalive timer
      *
@@ -513,7 +514,8 @@ public class Subscriber {
         private void armTxTimer(){
             long timeNow = System.nanoTime();
             mTxTimer = mExecCtx.createTimerTask();
-            long delay = GlobalConstants.CALL_PACKET_INTERVAL* (mSeqNumber - mFirstPktSeqNumber) - (int)((timeNow - mFirstPktTime)/(1000*1000));
+            long delay = GlobalConstants.CALL_PACKET_INTERVAL* (mSeqNumber + 1 - mFirstPktSeqNumber)
+                    - (int)((timeNow - mFirstPktTime)/(1000*1000));
             if(delay < 0) {
                 mLogger.w(TAG, "negative delay:" + delay);
             }
