@@ -116,6 +116,7 @@ public class Subscriber {
         Registration reg = new Registration(GlobalConstants.SUID_TRUNK_MANAGER, mConfig.mSuid, ++mSeqNumber);
         ByteBuffer payload  = ByteBuffer.allocate(reg.getSize());
         reg.serialize(payload);
+        System.out.println("to send reg: seq=" + mSeqNumber);
         mUdpSvc.send(payload);
     }
 
@@ -124,6 +125,7 @@ public class Subscriber {
         CallInit preamble = new CallInit(mConfig.mTgtid, mConfig.mSuid, ++mSeqNumber);
         ByteBuffer payload = ByteBuffer.allocate(preamble.getSize());
         preamble.serialize(payload);
+        System.out.println("to send callInit: seq=" + mSeqNumber);
         mUdpSvc.send(payload);
     }
 
@@ -472,8 +474,10 @@ public class Subscriber {
                 case ProtocolBase.PTYPE_CALL_INIT:
                     CallInit callInit = (CallInit) proto;
                     if( callInit.getSource() == mConfig.mSuid ){
-                        mLogger.d(TAG, "rxed callInit, initiated from myself");
-                        mbChannelGranted = true;
+                        if( callInit.getTarget() == mConfig.mTgtid ) {
+                            mLogger.d(TAG, "rxed callInit, initiated from myself");
+                            mbChannelGranted = true;
+                        }
                     } else {
                         mLogger.d(TAG, "rxed callInit from other");
                         mState = State.RX;
@@ -495,7 +499,7 @@ public class Subscriber {
         @Override
         public void timerExpired(NamedTimerTask timerTask) {
             if( timerTask == mTxTimer){
-                int numSent = mSeqNumber - mFirstPktSeqNumber;
+                int numSent = mSeqNumber + 1 - mFirstPktSeqNumber;
                 if( numSent >= 3 ){
                     mLogger.d(TAG, "we've sent " + numSent +" callInit" + ", channel granted=" + mbChannelGranted);
                     if( mbChannelGranted ){
@@ -518,8 +522,13 @@ public class Subscriber {
                     - (int)((timeNow - mFirstPktTime)/(1000*1000));
             if(delay < 0) {
                 mLogger.w(TAG, "negative delay:" + delay);
+                // try to catch up
+                System.out.println("catchup negative delay: " + delay + "ms");
+                timerExpired(mTxTimer);
+            } else {
+                mExecCtx.schedule(mTxTimer, delay);
+                System.out.println("schedule timer: " + delay + "ms");
             }
-            mExecCtx.schedule(mTxTimer, delay);
         }
 
         private void rearmTxTimer(){
