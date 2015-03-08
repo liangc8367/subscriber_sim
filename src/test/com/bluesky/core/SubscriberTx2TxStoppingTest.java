@@ -27,15 +27,15 @@ import java.nio.Buffer;
 import java.nio.ByteBuffer;
 
 /**
- * subscriber Offline test Tester.
+ * subscriber Tx2Hang test Tester.
  *
  * @author <Authors name>
  * @since <pre>Feb 27, 2015</pre>
  * @version 1.0
  */
 @RunWith(MockitoJUnitRunner.class)
-public class SubscriberOnline2TxInitTest {
-//
+public class SubscriberTx2TxStoppingTest {
+
 //    @Mock
 //    DataSink spkr;
 //    @Mock
@@ -123,26 +123,7 @@ public class SubscriberOnline2TxInitTest {
 //        su.ptt(true);
 //        assertEquals(stateListener.mState, Subscriber.State.TXINIT);
 //
-//        // verify it start to send callInit packets
-////        Mockito.verify(execCtx, times(1)).createTimerTask();
-////        Mockito.verify(execCtx, times(1)).schedule(any(NamedTimerTask.class),
-////                and(gt(0L), leq(GlobalConstants.CALL_PACKET_INTERVAL)));
-////        Mockito.verify(udpService, times(1)).send((ByteBuffer) argThat(
-////                new IsExpectedPayload(config.mTgtid,
-////                        config.mSuid,
-////                        CallInit.class)));
-//
 //        su.timerExpired(timerTask);
-//
-////        Mockito.verify(execCtx, times(2)).createTimerTask();
-////        Mockito.verify(execCtx, times(2)).schedule(any(NamedTimerTask.class),
-////                leq(GlobalConstants.CALL_PACKET_INTERVAL));
-////        Mockito.verify(execCtx, times(2)).schedule(any(NamedTimerTask.class),
-////                and(gt(0L), leq(GlobalConstants.CALL_PACKET_INTERVAL * 2))); //<== important, coz mock is not real-time
-////        Mockito.verify(udpService, times(2)).send((ByteBuffer) argThat(
-////                new IsExpectedPayload(config.mTgtid,
-////                        config.mSuid,
-////                        CallInit.class)));
 //
 //        // verify a callInit from trunk mgr will trigger SU to txing state, AND that callInit must
 //        // came from the SU itself
@@ -168,8 +149,17 @@ public class SubscriberOnline2TxInitTest {
 //
 //        assertEquals(stateListener.mState, Subscriber.State.TX);
 //
+//        //
+//        // - on data available: sent data
+//        ByteBuffer compressAudioData = ByteBuffer.allocate(20);
+//        su.micDataAvailable(compressAudioData);
+//
+//        // - ptt release: stop tx, and transit to TxStopping
+//        su.ptt(false);
+//
+//        assertEquals(stateListener.mState, Subscriber.State.TXSTOPPING);
 //
 //    }
-//
+
 
 }

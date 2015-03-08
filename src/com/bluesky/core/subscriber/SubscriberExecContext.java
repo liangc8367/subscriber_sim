@@ -1,9 +1,8 @@
-package com.bluesky.core;
+package com.bluesky.core.subscriber;
 
 import com.bluesky.common.NamedTimerTask;
 import com.bluesky.common.OLog;
 import com.bluesky.common.UDPService;
-import com.bluesky.core.Subscriber;
 
 import java.net.DatagramPacket;
 import java.util.TimerTask;
@@ -56,6 +55,14 @@ public class SubscriberExecContext {
                 mExecutor.execute(tmExpired);
             }
         };
+    }
+
+    /** get system time in millseconds
+     *
+     * @return
+     */
+    public long currentTimeMillis(){
+       return System.currentTimeMillis();
     }
 
     public void schedule(TimerTask timerTask, long delayMs){

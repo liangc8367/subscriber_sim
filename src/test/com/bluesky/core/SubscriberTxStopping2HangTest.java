@@ -14,28 +14,32 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentMatcher;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-
-import static junit.framework.TestCase.assertEquals;
-import static org.mockito.AdditionalMatchers.and;
-import static org.mockito.AdditionalMatchers.gt;
-import static org.mockito.AdditionalMatchers.leq;
-import static org.mockito.Mockito.*;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import java.net.DatagramPacket;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 
+import static junit.framework.TestCase.assertEquals;
+import static org.mockito.AdditionalMatchers.and;
+import static org.mockito.AdditionalMatchers.gt;
+import static org.mockito.AdditionalMatchers.leq;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.argThat;
+import static org.mockito.Mockito.stub;
+import static org.mockito.Mockito.times;
+
+
 /**
- * subscriber Offline test Tester.
+ * subscriber Tx2Hang test Tester.
  *
  * @author <Authors name>
  * @since <pre>Feb 27, 2015</pre>
  * @version 1.0
  */
 @RunWith(MockitoJUnitRunner.class)
-public class SubscriberOnline2TxInitTest {
-//
+public class SubscriberTxStopping2HangTest {
+
 //    @Mock
 //    DataSink spkr;
 //    @Mock
@@ -123,26 +127,7 @@ public class SubscriberOnline2TxInitTest {
 //        su.ptt(true);
 //        assertEquals(stateListener.mState, Subscriber.State.TXINIT);
 //
-//        // verify it start to send callInit packets
-////        Mockito.verify(execCtx, times(1)).createTimerTask();
-////        Mockito.verify(execCtx, times(1)).schedule(any(NamedTimerTask.class),
-////                and(gt(0L), leq(GlobalConstants.CALL_PACKET_INTERVAL)));
-////        Mockito.verify(udpService, times(1)).send((ByteBuffer) argThat(
-////                new IsExpectedPayload(config.mTgtid,
-////                        config.mSuid,
-////                        CallInit.class)));
-//
 //        su.timerExpired(timerTask);
-//
-////        Mockito.verify(execCtx, times(2)).createTimerTask();
-////        Mockito.verify(execCtx, times(2)).schedule(any(NamedTimerTask.class),
-////                leq(GlobalConstants.CALL_PACKET_INTERVAL));
-////        Mockito.verify(execCtx, times(2)).schedule(any(NamedTimerTask.class),
-////                and(gt(0L), leq(GlobalConstants.CALL_PACKET_INTERVAL * 2))); //<== important, coz mock is not real-time
-////        Mockito.verify(udpService, times(2)).send((ByteBuffer) argThat(
-////                new IsExpectedPayload(config.mTgtid,
-////                        config.mSuid,
-////                        CallInit.class)));
 //
 //        // verify a callInit from trunk mgr will trigger SU to txing state, AND that callInit must
 //        // came from the SU itself
@@ -168,6 +153,38 @@ public class SubscriberOnline2TxInitTest {
 //
 //        assertEquals(stateListener.mState, Subscriber.State.TX);
 //
+//        //
+//        // - on data available: sent data
+//        ByteBuffer compressAudioData = ByteBuffer.allocate(20);
+//        su.micDataAvailable(compressAudioData);
+//
+//        // - ptt release: stop tx, and transit to TxStopping
+//        resetMocks();
+//        stub(execCtx.createTimerTask()).toReturn(timerTask);
+//
+//        su.ptt(false);
+//
+//        assertEquals(stateListener.mState, Subscriber.State.TXSTOPPING);
+//
+//        // now, it's in tx-stopping state
+//        // callInit/ callData => Rx
+//        // callTerm (from others) => call hang
+//        // transit to call hang automatically, after sending 3 callTerm
+//        Mockito.verify(execCtx, times(1)).createTimerTask();
+//        Mockito.verify(execCtx, times(1)).schedule(any(NamedTimerTask.class),
+//                and(gt(0L), leq(GlobalConstants.CALL_PACKET_INTERVAL)));
+//        Mockito.verify(udpService, times(1)).send((ByteBuffer) argThat(
+//                new IsExpectedPayload(config.mTgtid,
+//                        config.mSuid,
+//                        CallTerm.class)));
+//
+//        su.timerExpired(timerTask);
+//
+//        su.timerExpired(timerTask);
+//
+//        su.timerExpired(timerTask);
+//
+//        assertEquals(stateListener.mState, Subscriber.State.HANG);
 //
 //    }
 //

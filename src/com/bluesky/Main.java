@@ -3,7 +3,8 @@ package com.bluesky;
 import com.bluesky.common.GlobalConstants;
 import com.bluesky.common.UDPService;
 import com.bluesky.common.XLog;
-import com.bluesky.core.Subscriber;
+import com.bluesky.core.subscriber.Configuration;
+import com.bluesky.core.subscriber.Subscriber;
 import com.bluesky.stubs.MicSim;
 import com.bluesky.stubs.SpkrSim;
 
@@ -18,7 +19,7 @@ public class Main {
      * @param args
      */
     public static void main(String[] args) {
-        System.out.println("Subscriber simulator.");
+        System.out.println("subscriber simulator.");
         if( args.length != 1){
             System.err.println("syntax: simulator [suid]");
             System.exit(-1);
@@ -52,7 +53,7 @@ public class Main {
         }
 
         ExecutorService executor = Executors.newSingleThreadExecutor();
-        Subscriber.Configuration config = new Subscriber.Configuration();
+        Configuration config = new Configuration();
         config.mSuid = suid;
 
 
@@ -60,7 +61,7 @@ public class Main {
         DataSink spkr = new SpkrSim();
         //UDPService udpService, OLog logger
 
-//        Subscriber su = new Subscriber(config, executor, mic, spkr, udpSvc, logger);
+//        subscriber su = new subscriber(config, executor, mic, spkr, udpSvc, logger);
 //        su.start();
 
         try {
