@@ -10,6 +10,7 @@ import com.bluesky.core.subscriber.*;
 
 import com.bluesky.protocol.Ack;
 import com.bluesky.protocol.Registration;
+import junit.framework.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentMatcher;
@@ -40,15 +41,6 @@ public class StateOfflineTest {
     @Mock
     OLog logger;
 
-    private static class StateListener implements Subscriber.SubscriberStateListener{
-        @Override
-        public void stateChanged(State newState){
-            mState = newState;
-        }
-        public State mState;
-    }
-
-    final StateListener stateListener = new StateListener();
     final Configuration config = new Configuration();
     final NamedTimerTask timerTask = new NamedTimerTask(20) {
         @Override
@@ -67,7 +59,6 @@ public class StateOfflineTest {
 
         config.mSuid = 100;
         su = new Subscriber(config, execCtx, mic, spkr, udpService, logger);
-        su.registerStateListener(stateListener);
         stateOffline = new StateOffline(su);
 
     }
@@ -111,6 +102,7 @@ public class StateOfflineTest {
 
         stateOffline.packetReceived(pkt);
 
-//        assertEquals(stateListener.mState, State.ONLINE);
+        SubscriberPeeper peeper = new SubscriberPeeper();
+        assertEquals(State.ONLINE, peeper.peepState(su));
     }
 }
