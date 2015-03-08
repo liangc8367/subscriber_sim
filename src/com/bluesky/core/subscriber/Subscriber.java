@@ -150,7 +150,16 @@ public class Subscriber {
         //TODO:
     }
 
+    /** record call information
+     *
+     */
+    void recordCallInfo(long target, long source){
+        mCallInfo.mTargetId = target;
+        mCallInfo.mSuid = source;
+    }
+
     Configuration mConfig;
+    private CallInformation mCallInfo = new CallInformation();
     final DataSource mMic;
     final DataSink mSpkr;
     final UDPService mUdpSvc;

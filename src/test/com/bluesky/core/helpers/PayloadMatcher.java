@@ -1,4 +1,4 @@
-package test.com.bluesky.core;
+package test.com.bluesky.core.helpers;
 
 import com.bluesky.protocol.ProtocolBase;
 import com.bluesky.protocol.ProtocolFactory;

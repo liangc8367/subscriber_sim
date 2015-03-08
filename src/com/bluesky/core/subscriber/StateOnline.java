@@ -17,7 +17,7 @@ import java.net.DatagramPacket;
  *  - pkt rxed, callTerm, transit to call hang state
  *  - ptt: to TxInit
  *
- *  - keepalive timer
+ *  - keepalive timer expired: return to offline
  *
  */
 public class StateOnline extends StateNode {
@@ -28,7 +28,6 @@ public class StateOnline extends StateNode {
         mSub.mLogger.d(mSub.TAG, "entry Online");
         mKeepAliveTimer = mSub.mExecCtx.createTimerTask();
         mSub.mExecCtx.schedule(mKeepAliveTimer, GlobalConstants.REGISTRATION_RETRY_MAX_TIME);
-        ++mKeepAliveAttempts;
     };
     public void exit(){
         mSub.mLogger.d(mSub.TAG, "exit Online");
@@ -36,7 +35,6 @@ public class StateOnline extends StateNode {
             mKeepAliveTimer.cancel();
             mKeepAliveTimer = null;
         }
-        mKeepAliveAttempts = 0;
     }
 
     @Override
@@ -55,30 +53,19 @@ public class StateOnline extends StateNode {
         switch( proto.getType()){
             case ProtocolBase.PTYPE_CALL_INIT:
                 mSub.mLogger.d(mSub.TAG, "rxed callInit");
+                mSub.recordCallInfo(proto.getTarget(), proto.getSource());
                 mSub.mState = State.RX;
                 break;
             case ProtocolBase.PTYPE_CALL_DATA:
                 mSub.mLogger.d(mSub.TAG, "rxed callData");
+                mSub.recordCallInfo(proto.getTarget(), proto.getSource());
                 mSub.mSpkr.offerData(((CallData) proto).getAudioData(), proto.getSequence());
                 mSub.mState = State.RX;
                 break;
             case ProtocolBase.PTYPE_CALL_TERM:
                 mSub.mLogger.d(mSub.TAG, "rxed callTerm");
+                mSub.recordCallInfo(proto.getTarget(), proto.getSource());
                 mSub.mState = State.CALL_HANG;
-                break;
-            case ProtocolBase.PTYPE_ACK:
-                Ack ack = (Ack) proto;
-                if( ack.getAckType() == Ack.ACKTYPE_POSITIVE ){
-                    // TODO: validate source/target/seq of ack
-                    mSub.mLogger.i(mSub.TAG, "rxed registeration ack");
-                    mSub.sendRegistration();
-                    if(mKeepAliveTimer !=null){
-                        mKeepAliveTimer.cancel();
-                    }
-                    mKeepAliveTimer = mSub.mExecCtx.createTimerTask();
-                    mSub.mExecCtx.schedule(mKeepAliveTimer, GlobalConstants.REGISTRATION_RETRY_TIME);
-                    ++mKeepAliveAttempts;
-                }
                 break;
         }
     }
@@ -92,5 +79,4 @@ public class StateOnline extends StateNode {
     }
 
     private NamedTimerTask mKeepAliveTimer = null;
-    private int mKeepAliveAttempts = 0;
 }
