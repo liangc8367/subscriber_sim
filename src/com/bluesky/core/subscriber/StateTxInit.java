@@ -17,7 +17,7 @@ import java.net.DatagramPacket;
  * - callTerm: to callhang
  * - callData: from others, to callRxing
  */
-class StateTxInit extends StateNode{
+public class StateTxInit extends StateNode{
     public StateTxInit(Subscriber sub){
         super(sub);
     }
@@ -25,7 +25,7 @@ class StateTxInit extends StateNode{
     @Override
     public void entry() {
         mSub.mLogger.d(mSub.TAG, "enter call init");
-        mSub.mFirstPktTime = System.nanoTime();
+        mSub.mFirstPktTime = mSub.mExecCtx.currentTimeMillis();
         mSub.sendCallInit();
         mSub.mFirstPktSeqNumber = mSub.mSeqNumber;
         armTxTimer();
@@ -57,17 +57,19 @@ class StateTxInit extends StateNode{
                     }
                 } else {
                     mSub.mLogger.d(mSub.TAG, "rxed callInit from other");
+                    mSub.recordCallInfo(proto.getTarget(), proto.getSource());
                     mSub.mState = State.RX;
                 }
                 break;
             case ProtocolBase.PTYPE_CALL_DATA:
-                //TODO: validate
                 mSub.mLogger.d(mSub.TAG, "rxed callData");
+                mSub.recordCallInfo(proto.getTarget(), proto.getSource());
                 mSub.mSpkr.offerData(((CallData) proto).getAudioData(), proto.getSequence());
                 mSub.mState = State.RX;
                 break;
             case ProtocolBase.PTYPE_CALL_TERM:
                 mSub.mLogger.d(mSub.TAG, "rxed callTerm");
+                mSub.recordCallInfo(proto.getTarget(), proto.getSource());
                 mSub.mState = State.CALL_HANG;
                 break;
         }
@@ -93,18 +95,16 @@ class StateTxInit extends StateNode{
     }
 
     private void armTxTimer(){
-        long timeNow = System.nanoTime();
+        long timeNow = mSub.mExecCtx.currentTimeMillis();
         mTxTimer = mSub.mExecCtx.createTimerTask();
         long delay = GlobalConstants.CALL_PACKET_INTERVAL* (mSub.mSeqNumber + 1 - mSub.mFirstPktSeqNumber)
-                - (int)((timeNow - mSub.mFirstPktTime)/(1000*1000));
+                - (int)((timeNow - mSub.mFirstPktTime));
         if(delay < 0) {
             mSub.mLogger.w(mSub.TAG, "negative delay:" + delay);
             // try to catch up
-            System.out.println("catchup negative delay: " + delay + "ms");
             timerExpired(mTxTimer);
         } else {
             mSub.mExecCtx.schedule(mTxTimer, delay);
-            System.out.println("schedule timer: " + delay + "ms");
         }
     }
 

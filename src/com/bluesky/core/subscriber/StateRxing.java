@@ -10,12 +10,12 @@ import java.nio.ByteBuffer;
 
 /** Rxing state,
  *  - callInit: ignore
- *  - callData: offer to spkr module
- *  - callTerm: offer to spkr module
+ *  - callData: offer to spkr module, only for current call
+ *  - callTerm: offer to spkr module, only for current call
  *  - rxEnd: transit to call hang
  *
  */
-class StateRxing extends StateNode{
+public class StateRxing extends StateNode{
     public StateRxing(Subscriber sub){
         super(sub);
     }
@@ -37,6 +37,10 @@ class StateRxing extends StateNode{
         //TODO: to validate packet source and seq
         // validate target/src
         ProtocolBase proto = ProtocolFactory.getProtocol(packet);
+        if( proto.getTarget()!= mSub.mCallInfo.mTargetId || proto.getSource() != mSub.mCallInfo.mSourceId ){
+            mSub.mLogger.d(mSub.TAG, "proto was not for present call, ignore it");
+            return;
+        }
         switch( proto.getType()){
             case ProtocolBase.PTYPE_CALL_INIT:
                 mSub.mLogger.d(mSub.TAG, "rxed callInit");

@@ -16,15 +16,40 @@ public class SubscriberPeeper {
 
         fieldCallInfo = Subscriber.class.getDeclaredField("mCallInfo");
         fieldCallInfo.setAccessible(true);
+
+        fieldFirstCallSeq = Subscriber.class.getDeclaredField("mFirstPktSeqNumber");
+        fieldFirstCallSeq.setAccessible(true);
+
+        fieldFirstCallTime = Subscriber.class.getDeclaredField("mFirstPktTime");
+        fieldFirstCallTime.setAccessible(true);
+
+        fieldSeqNumber = Subscriber.class.getDeclaredField("mSeqNumber");
+        fieldSeqNumber.setAccessible(true);
     }
 
     public State peepState(Subscriber sub) throws Exception{
         return (State) fieldState.get(sub);
     }
 
+    public void setState(Subscriber sub, State state) throws Exception{
+        fieldState.set(sub, state);
+    }
+
     public CallInformation peepCallInfo(Subscriber sub) throws Exception{
         return (CallInformation) fieldCallInfo.get(sub);
     }
 
-    private Field fieldState, fieldCallInfo;
+    public void setFirstCallSeq(Subscriber sub, short seq) throws Exception {
+        fieldFirstCallSeq.set(sub, seq);
+    }
+
+    public void setFirstCallTime(Subscriber sub, long ms) throws Exception {
+        fieldFirstCallTime.set(sub, ms);
+    }
+
+    public void setSeqNumber(Subscriber sub, short seq) throws Exception {
+        fieldSeqNumber.set(sub, seq);
+    }
+
+    private Field fieldState, fieldCallInfo, fieldFirstCallSeq, fieldFirstCallTime, fieldSeqNumber;
 }

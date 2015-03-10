@@ -7,7 +7,7 @@ import java.nio.ByteBuffer;
  *  - ptt release: stop tx, and transit to TxStopping
  *  - txEnd: tx stopped prior to ptt release: call hang
  */
-class StateTx extends StateNode {
+public class StateTx extends StateNode {
     public StateTx(Subscriber sub){
         super(sub);
     }

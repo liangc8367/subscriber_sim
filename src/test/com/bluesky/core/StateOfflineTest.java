@@ -51,15 +51,17 @@ public class StateOfflineTest {
     Subscriber su;
     StateOffline stateOffline;
 
-    private void setup(){
+    private void setup() throws Exception{
         Mockito.reset(udpService);
         Mockito.reset(execCtx);
         stub(execCtx.createTimerTask()).toReturn(timerTask);
 
         config.mSuid = 100;
         su = new Subscriber(config, execCtx, mic, spkr, udpService, logger);
-        stateOffline = new StateOffline(su);
+        SubscriberPeeper peeper = new SubscriberPeeper();
+        peeper.setState(su, State.OFFLINE);
 
+        stateOffline = new StateOffline(su);
     }
 
     @Test

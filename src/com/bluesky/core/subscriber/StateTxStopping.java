@@ -16,7 +16,7 @@ import java.net.DatagramPacket;
  *  - callData: to rx
  *  - callTerm: to callhang
  */
-class StateTxStopping extends StateNode {
+public class StateTxStopping extends StateNode {
 
     public StateTxStopping(Subscriber sub){
         super(sub);
@@ -55,27 +55,28 @@ class StateTxStopping extends StateNode {
     @Override
     public void packetReceived(DatagramPacket packet) {
         mSub.mLogger.d(mSub.TAG, "rxed: " + ProtocolHelpers.peepProtocol(packet));
-        //TODO: to validate packet source and seq
-        // validate target/src
+
         ProtocolBase proto = ProtocolFactory.getProtocol(packet);
+        if( proto.getSource() == mSub.mConfig.mSuid ){
+            mSub.mLogger.d(mSub.TAG, "rxed proto from myself");
+            return;
+        }
         switch( proto.getType()){
             case ProtocolBase.PTYPE_CALL_INIT:
                 mSub.mLogger.d(mSub.TAG, "rxed callInit");
+                mSub.recordCallInfo(proto.getTarget(), proto.getSource());
                 mSub.mState = State.RX;
                 break;
             case ProtocolBase.PTYPE_CALL_DATA:
                 mSub.mLogger.d(mSub.TAG, "rxed callData");
+                mSub.recordCallInfo(proto.getTarget(), proto.getSource());
                 mSub.mSpkr.offerData(((CallData) proto).getAudioData(), proto.getSequence());
                 mSub.mState = State.RX;
                 break;
             case ProtocolBase.PTYPE_CALL_TERM:
                 mSub.mLogger.d(mSub.TAG, "rxed callTerm");
-                CallTerm callTerm = (CallTerm) proto;
-                if( callTerm.getSource() == mSub.mConfig.mSuid ){
-                    //ignore
-                } else {
-                    mSub.mState = State.CALL_HANG;
-                }
+                mSub.recordCallInfo(proto.getTarget(), proto.getSource());
+                mSub.mState = State.CALL_HANG;
                 break;
         }
     }
@@ -86,10 +87,10 @@ class StateTxStopping extends StateNode {
     }
 
     private void armTxTimer(){
-        long timeNow = System.nanoTime();
+        long timeNow = mSub.mExecCtx.currentTimeMillis();
         mTxTimer = mSub.mExecCtx.createTimerTask();
-        long delay = GlobalConstants.CALL_PACKET_INTERVAL* (mSub.mLastPktSeqNumber + 1 - mSub.mFirstPktSeqNumber)
-                - (int)((timeNow - mSub.mFirstPktTime)/(1000*1000));
+        long delay = GlobalConstants.CALL_PACKET_INTERVAL* (mSub.mSeqNumber + 1 - mSub.mFirstPktSeqNumber)
+                        + mSub.mFirstPktTime - timeNow;
         if(delay < 0) {
             mSub.mLogger.w(mSub.TAG, "negative delay:" + delay);
         }
@@ -100,14 +101,7 @@ class StateTxStopping extends StateNode {
         if(mTxTimer !=null){
             mTxTimer.cancel();
         }
-        long timeNow = System.nanoTime();
-        mTxTimer = mSub.mExecCtx.createTimerTask();
-        long delay = GlobalConstants.CALL_PACKET_INTERVAL* (mSub.mSeqNumber - mSub.mFirstPktSeqNumber)
-                - (int)((timeNow - mSub.mFirstPktTime)/(1000*1000));
-        if(delay < 0) {
-            mSub.mLogger.w(mSub.TAG, "negative delay:" + delay);
-        }
-        mSub.mExecCtx.schedule(mTxTimer, delay);
+        armTxTimer();
     }
 
     private NamedTimerTask mTxTimer;

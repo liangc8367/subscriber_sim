@@ -105,7 +105,6 @@ public class Subscriber {
         Registration reg = new Registration(GlobalConstants.SUID_TRUNK_MANAGER, mConfig.mSuid, ++mSeqNumber);
         ByteBuffer payload  = ByteBuffer.allocate(reg.getSize());
         reg.serialize(payload);
-        System.out.println("to send reg: seq=" + mSeqNumber);
         mUdpSvc.send(payload);
     }
 
@@ -114,7 +113,6 @@ public class Subscriber {
         CallInit preamble = new CallInit(mConfig.mTgtid, mConfig.mSuid, ++mSeqNumber);
         ByteBuffer payload = ByteBuffer.allocate(preamble.getSize());
         preamble.serialize(payload);
-        System.out.println("to send callInit: seq=" + mSeqNumber);
         mUdpSvc.send(payload);
     }
 
@@ -139,7 +137,6 @@ public class Subscriber {
         );
         ByteBuffer payload = ByteBuffer.allocate(callTerm.getSize());
         callTerm.serialize(payload);
-        System.out.println("to send callTerm: seq=" + mSeqNumber);
         mUdpSvc.send(payload);
     }
 
@@ -155,11 +152,11 @@ public class Subscriber {
      */
     void recordCallInfo(long target, long source){
         mCallInfo.mTargetId = target;
-        mCallInfo.mSuid = source;
+        mCallInfo.mSourceId = source;
     }
 
     Configuration mConfig;
-    private CallInformation mCallInfo = new CallInformation();
+    CallInformation mCallInfo = new CallInformation();
     final DataSource mMic;
     final DataSink mSpkr;
     final UDPService mUdpSvc;

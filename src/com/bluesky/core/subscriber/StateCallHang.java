@@ -16,7 +16,7 @@ import java.net.DatagramPacket;
  *  - ptt: to callInit
  *  - timeout: to idle/online (after last hang period following last callTerm)
  */
-class StateCallHang extends StateNode {
+public class StateCallHang extends StateNode {
     public StateCallHang(Subscriber sub){
         super(sub);
     }
@@ -56,21 +56,28 @@ class StateCallHang extends StateNode {
     @Override
     public void packetReceived(DatagramPacket packet) {
         mSub.mLogger.d(mSub.TAG, "rxed: " + ProtocolHelpers.peepProtocol(packet));
-        //TODO: to validate packet source and seq
-        // validate target/src
         ProtocolBase proto = ProtocolFactory.getProtocol(packet);
         switch( proto.getType()){
             case ProtocolBase.PTYPE_CALL_INIT:
-                mSub.mLogger.d(mSub.TAG, "rxed callInit");
-                mSub.mState = State.RX;
+                if(proto.getSource() != mSub.mConfig.mSuid) {
+                    mSub.mLogger.d(mSub.TAG, "rxed callInit");
+                    mSub.recordCallInfo(proto.getTarget(), proto.getSource());
+                    mSub.mState = State.RX;
+                }
                 break;
             case ProtocolBase.PTYPE_CALL_DATA:
-                mSub.mLogger.d(mSub.TAG, "rxed callData");
-                mSub.mSpkr.offerData(((CallData) proto).getAudioData(), proto.getSequence());
-                mSub.mState = State.RX;
+                if(proto.getSource() != mSub.mConfig.mSuid) {
+                    mSub.mLogger.d(mSub.TAG, "rxed callData");
+                    mSub.recordCallInfo(proto.getTarget(), proto.getSource());
+                    mSub.mSpkr.offerData(((CallData) proto).getAudioData(), proto.getSequence());
+                    mSub.mState = State.RX;
+                }
                 break;
             case ProtocolBase.PTYPE_CALL_TERM:
-                mSub.mLogger.d(mSub.TAG, "rxed callTerm");
+                if(proto.getSource() != mSub.mConfig.mSuid) {
+                    mSub.mLogger.d(mSub.TAG, "rxed callTerm");
+                    mSub.recordCallInfo(proto.getTarget(), proto.getSource());
+                }
                 mCallHangGuardTimer.cancel();
                 mCallHangGuardTimer = mSub.mExecCtx.createTimerTask();
                 mSub.mExecCtx.schedule(mCallHangGuardTimer, GlobalConstants.CALL_HANG_PERIOD);

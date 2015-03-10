@@ -1,0 +1,224 @@
+package test.com.bluesky.core;
+
+import com.bluesky.DataSink;
+import com.bluesky.DataSource;
+import com.bluesky.common.GlobalConstants;
+import com.bluesky.common.NamedTimerTask;
+import com.bluesky.common.OLog;
+import com.bluesky.common.UDPService;
+import com.bluesky.core.subscriber.*;
+
+import com.bluesky.protocol.CallData;
+import com.bluesky.protocol.CallInit;
+import com.bluesky.protocol.CallTerm;
+import junit.framework.Assert;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+
+import static junit.framework.TestCase.assertEquals;
+import static org.mockito.Mockito.*;
+import org.mockito.runners.MockitoJUnitRunner;
+
+import java.net.DatagramPacket;
+import java.nio.ByteBuffer;
+
+import test.com.bluesky.core.helpers.SubscriberPeeper;
+
+/**
+ * Created by liangc on 08/03/15.
+ */
+@RunWith(MockitoJUnitRunner.class)
+public class StateCallHangTest {
+    @Mock
+    DataSink spkr;
+    @Mock
+    DataSource mic;
+    @Mock
+    UDPService udpService;
+    @Mock
+    SubscriberExecContext execCtx;
+    @Mock
+    OLog logger;
+
+    final Configuration config = new Configuration();
+    final NamedTimerTask timerTask = new NamedTimerTask(20) {
+        @Override
+        public void run() {
+
+        }
+    };
+
+    Subscriber su;
+    StateCallHang stateCallHang;
+    long tgt = 1000, src = 200;
+
+    private void setup() throws Exception {
+        Mockito.reset(udpService);
+        Mockito.reset(execCtx);
+        stub(execCtx.createTimerTask()).toReturn(timerTask);
+
+        config.mSuid = src;
+        su = new Subscriber(config, execCtx, mic, spkr, udpService, logger);
+        SubscriberPeeper peeper = new SubscriberPeeper();
+        peeper.setState(su, State.CALL_HANG);
+        peeper.peepCallInfo(su).mSourceId = config.mSuid;
+        peeper.peepCallInfo(su).mTargetId = tgt;
+
+        stateCallHang = new StateCallHang(su);
+    }
+
+    /*
+ *  - callInit: to call rxing
+ *  - callTerm: remain in call hang (trunking mgr should broadcase callTerm during this period)
+ *  - callData: validate, and to call rxing
+ *  - ptt: to callInit
+ *  - timeout: to idle/online (after last hang period following last callTerm)
+     */
+
+    @Test
+    public void test_callHang_ptt_pressed() throws Exception {
+        setup();
+        stateCallHang.entry();
+
+        stateCallHang.ptt(true);
+        SubscriberPeeper peeper = new SubscriberPeeper();
+        assertEquals(State.TX_INIT, peeper.peepState(su));
+    }
+
+    @Test
+    public void test_callHang_rxed_callInit() throws Exception {
+        setup();
+        stateCallHang.entry();
+
+        long alien = 300;
+        short seq = 20;
+        CallInit callInit = new CallInit(tgt, alien, seq);
+        ByteBuffer payload = ByteBuffer.allocate(callInit.getSize());
+        callInit.serialize(payload);
+        DatagramPacket pkt = new DatagramPacket(payload.array(), payload.capacity());
+
+        stateCallHang.packetReceived(pkt);
+        SubscriberPeeper peeper = new SubscriberPeeper();
+        assertEquals(State.RX, peeper.peepState(su));
+
+        assertEquals(peeper.peepCallInfo(su).mTargetId, tgt);
+        assertEquals(peeper.peepCallInfo(su).mSourceId, alien);
+    }
+
+    @Test
+    public void test_callHang_rxed_self_callInit() throws Exception {
+        setup();
+        stateCallHang.entry();
+
+
+        short seq = 20;
+        CallInit callInit = new CallInit(tgt, src, seq);
+        ByteBuffer payload = ByteBuffer.allocate(callInit.getSize());
+        callInit.serialize(payload);
+        DatagramPacket pkt = new DatagramPacket(payload.array(), payload.capacity());
+
+        stateCallHang.packetReceived(pkt);
+        SubscriberPeeper peeper = new SubscriberPeeper();
+        assertEquals(State.CALL_HANG, peeper.peepState(su));
+
+        assertEquals(peeper.peepCallInfo(su).mTargetId, tgt);
+        assertEquals(peeper.peepCallInfo(su).mSourceId, src);
+    }
+
+    @Test
+    public void test_callHang_rxed_callTerm() throws Exception {
+        setup();
+        stateCallHang.entry();
+
+        long alien = 300;
+        short seq = 20;
+        CallTerm callTerm = new CallTerm(tgt, alien, seq);
+        ByteBuffer payload = ByteBuffer.allocate(callTerm.getSize());
+        callTerm.serialize(payload);
+        DatagramPacket pkt = new DatagramPacket(payload.array(), payload.capacity());
+
+        stateCallHang.packetReceived(pkt);
+        SubscriberPeeper peeper = new SubscriberPeeper();
+        assertEquals(State.CALL_HANG, peeper.peepState(su));
+
+        assertEquals(peeper.peepCallInfo(su).mTargetId, tgt);
+        assertEquals(peeper.peepCallInfo(su).mSourceId, alien);
+    }
+
+    @Test
+    public void test_callHang_rxed_self_callTerm() throws Exception {
+        setup();
+        stateCallHang.entry();
+
+        short seq = 20;
+        CallTerm callTerm = new CallTerm(tgt, src, seq);
+        ByteBuffer payload = ByteBuffer.allocate(callTerm.getSize());
+        callTerm.serialize(payload);
+        DatagramPacket pkt = new DatagramPacket(payload.array(), payload.capacity());
+
+        stateCallHang.packetReceived(pkt);
+        SubscriberPeeper peeper = new SubscriberPeeper();
+        assertEquals(State.CALL_HANG, peeper.peepState(su));
+
+        assertEquals(peeper.peepCallInfo(su).mTargetId, tgt);
+        assertEquals(peeper.peepCallInfo(su).mSourceId, src);
+    }
+
+    @Test
+    public void test_callHang_rxed_callData() throws Exception {
+        setup();
+        stateCallHang.entry();
+
+        long alien = 300;
+        short seq = 20;
+        ByteBuffer audio = ByteBuffer.allocate(20);
+        CallData callData = new CallData(tgt, alien, seq, audio);
+        ByteBuffer payload = ByteBuffer.allocate(callData.getSize());
+        callData.serialize(payload);
+        DatagramPacket pkt = new DatagramPacket(payload.array(), payload.capacity());
+
+        stateCallHang.packetReceived(pkt);
+
+        Mockito.verify(spkr, times(1)).offerData(any(ByteBuffer.class), eq(seq));
+
+        SubscriberPeeper peeper = new SubscriberPeeper();
+        assertEquals(State.RX, peeper.peepState(su));
+        assertEquals(peeper.peepCallInfo(su).mTargetId, tgt);
+        assertEquals(peeper.peepCallInfo(su).mSourceId, alien);
+    }
+
+    @Test
+    public void test_callHang_rxed_self_callData() throws Exception {
+        setup();
+        stateCallHang.entry();
+
+        short seq = 20;
+        ByteBuffer audio = ByteBuffer.allocate(20);
+        CallData callData = new CallData(tgt, src, seq, audio);
+        ByteBuffer payload = ByteBuffer.allocate(callData.getSize());
+        callData.serialize(payload);
+        DatagramPacket pkt = new DatagramPacket(payload.array(), payload.capacity());
+
+        stateCallHang.packetReceived(pkt);
+
+        Mockito.verify(spkr, times(0)).offerData(any(ByteBuffer.class), eq(seq));
+
+        SubscriberPeeper peeper = new SubscriberPeeper();
+        assertEquals(State.CALL_HANG, peeper.peepState(su));
+        assertEquals(peeper.peepCallInfo(su).mTargetId, tgt);
+        assertEquals(peeper.peepCallInfo(su).mSourceId, src);
+    }
+
+    @Test
+    public void test_callHang_guard_time_out() throws Exception {
+        setup();
+        stateCallHang.entry();
+
+        stateCallHang.timerExpired(timerTask);
+        SubscriberPeeper peeper = new SubscriberPeeper();
+        assertEquals(State.ONLINE, peeper.peepState(su));
+
+    }
+}
