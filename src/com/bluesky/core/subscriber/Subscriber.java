@@ -1,7 +1,7 @@
 package com.bluesky.core.subscriber;
 
-import com.bluesky.DataSink;
-import com.bluesky.DataSource;
+import com.bluesky.core.dsp.SignalSink;
+import com.bluesky.core.dsp.SignalSource;
 import com.bluesky.common.*;
 import com.bluesky.protocol.*;
 
@@ -18,7 +18,7 @@ public class Subscriber {
         public void stateChanged(State newState);
     }
 
-    public Subscriber(Configuration config, SubscriberExecContext execCtx, /*ExecutorService exec,*/ DataSource mic, DataSink spkr, UDPService udpService, OLog logger){
+    public Subscriber(Configuration config, SubscriberExecContext execCtx, /*ExecutorService exec,*/ SignalSource mic, SignalSink spkr, UDPService udpService, OLog logger){
         mConfig = config;
         mMic = mic;
         mSpkr = spkr;
@@ -157,8 +157,8 @@ public class Subscriber {
 
     Configuration mConfig;
     CallInformation mCallInfo = new CallInformation();
-    final DataSource mMic;
-    final DataSink mSpkr;
+    final SignalSource mMic;
+    final SignalSink mSpkr;
     final UDPService mUdpSvc;
     final OLog mLogger;
     final SubscriberExecContext mExecCtx;

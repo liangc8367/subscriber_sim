@@ -3,10 +3,11 @@ package com.bluesky;
 import com.bluesky.common.GlobalConstants;
 import com.bluesky.common.UDPService;
 import com.bluesky.common.XLog;
+import com.bluesky.core.dsp.SignalSink;
+import com.bluesky.core.dsp.SignalSource;
 import com.bluesky.core.subscriber.Configuration;
-import com.bluesky.core.subscriber.Subscriber;
-import com.bluesky.stubs.MicSim;
-import com.bluesky.stubs.SpkrSim;
+import com.bluesky.core.dsp.stubs.MicSim;
+import com.bluesky.core.dsp.stubs.SpkrSim;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.ExecutorService;
@@ -57,8 +58,8 @@ public class Main {
         config.mSuid = suid;
 
 
-        DataSource mic = new MicSim();
-        DataSink spkr = new SpkrSim();
+        SignalSource mic = new MicSim();
+        SignalSink spkr = new SpkrSim();
         //UDPService udpService, OLog logger
 
 //        subscriber su = new subscriber(config, executor, mic, spkr, udpSvc, logger);

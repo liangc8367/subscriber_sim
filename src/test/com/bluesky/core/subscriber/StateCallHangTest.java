@@ -1,8 +1,7 @@
-package test.com.bluesky.core;
+package test.com.bluesky.core.subscriber;
 
-import com.bluesky.DataSink;
-import com.bluesky.DataSource;
-import com.bluesky.common.GlobalConstants;
+import com.bluesky.core.dsp.SignalSink;
+import com.bluesky.core.dsp.SignalSource;
 import com.bluesky.common.NamedTimerTask;
 import com.bluesky.common.OLog;
 import com.bluesky.common.UDPService;
@@ -11,7 +10,6 @@ import com.bluesky.core.subscriber.*;
 import com.bluesky.protocol.CallData;
 import com.bluesky.protocol.CallInit;
 import com.bluesky.protocol.CallTerm;
-import junit.framework.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -24,7 +22,7 @@ import org.mockito.runners.MockitoJUnitRunner;
 import java.net.DatagramPacket;
 import java.nio.ByteBuffer;
 
-import test.com.bluesky.core.helpers.SubscriberPeeper;
+import test.com.bluesky.core.subscriber.helpers.SubscriberPeeper;
 
 /**
  * Created by liangc on 08/03/15.
@@ -32,9 +30,9 @@ import test.com.bluesky.core.helpers.SubscriberPeeper;
 @RunWith(MockitoJUnitRunner.class)
 public class StateCallHangTest {
     @Mock
-    DataSink spkr;
+    SignalSink spkr;
     @Mock
-    DataSource mic;
+    SignalSource mic;
     @Mock
     UDPService udpService;
     @Mock
@@ -181,7 +179,7 @@ public class StateCallHangTest {
 
         stateCallHang.packetReceived(pkt);
 
-        Mockito.verify(spkr, times(1)).offerData(any(ByteBuffer.class), eq(seq));
+        Mockito.verify(spkr, times(1)).offer(any(ByteBuffer.class), eq(seq));
 
         SubscriberPeeper peeper = new SubscriberPeeper();
         assertEquals(State.RX, peeper.peepState(su));
@@ -203,7 +201,7 @@ public class StateCallHangTest {
 
         stateCallHang.packetReceived(pkt);
 
-        Mockito.verify(spkr, times(0)).offerData(any(ByteBuffer.class), eq(seq));
+        Mockito.verify(spkr, times(0)).offer(any(ByteBuffer.class), eq(seq));
 
         SubscriberPeeper peeper = new SubscriberPeeper();
         assertEquals(State.CALL_HANG, peeper.peepState(su));

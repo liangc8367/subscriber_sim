@@ -69,7 +69,7 @@ public class StateCallHang extends StateNode {
                 if(proto.getSource() != mSub.mConfig.mSuid) {
                     mSub.mLogger.d(mSub.TAG, "rxed callData");
                     mSub.recordCallInfo(proto.getTarget(), proto.getSource());
-                    mSub.mSpkr.offerData(((CallData) proto).getAudioData(), proto.getSequence());
+                    mSub.mSpkr.offer(((CallData) proto).getAudioData(), proto.getSequence());
                     mSub.mState = State.RX;
                 }
                 break;

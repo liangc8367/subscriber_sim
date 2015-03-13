@@ -3,7 +3,6 @@ package com.bluesky.core.subscriber;
 import com.bluesky.common.GlobalConstants;
 import com.bluesky.common.NamedTimerTask;
 import com.bluesky.common.ProtocolHelpers;
-import com.bluesky.protocol.Ack;
 import com.bluesky.protocol.CallData;
 import com.bluesky.protocol.ProtocolBase;
 import com.bluesky.protocol.ProtocolFactory;
@@ -59,7 +58,7 @@ public class StateOnline extends StateNode {
             case ProtocolBase.PTYPE_CALL_DATA:
                 mSub.mLogger.d(mSub.TAG, "rxed callData");
                 mSub.recordCallInfo(proto.getTarget(), proto.getSource());
-                mSub.mSpkr.offerData(((CallData) proto).getAudioData(), proto.getSequence());
+                mSub.mSpkr.offer(((CallData) proto).getAudioData(), proto.getSequence());
                 mSub.mState = State.RX;
                 break;
             case ProtocolBase.PTYPE_CALL_TERM:

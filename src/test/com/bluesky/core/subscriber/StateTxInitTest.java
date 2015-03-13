@@ -1,21 +1,19 @@
-package test.com.bluesky.core;
+package test.com.bluesky.core.subscriber;
 
-import com.bluesky.DataSink;
-import com.bluesky.DataSource;
+import com.bluesky.core.dsp.SignalSink;
+import com.bluesky.core.dsp.SignalSource;
 import com.bluesky.common.*;
 import com.bluesky.core.subscriber.*;
 import com.bluesky.protocol.CallData;
 import com.bluesky.protocol.CallInit;
 import com.bluesky.protocol.CallTerm;
-import com.bluesky.protocol.Registration;
-import junit.framework.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.runners.MockitoJUnitRunner;
-import test.com.bluesky.core.helpers.PayloadMatcher;
-import test.com.bluesky.core.helpers.SubscriberPeeper;
+import test.com.bluesky.core.subscriber.helpers.PayloadMatcher;
+import test.com.bluesky.core.subscriber.helpers.SubscriberPeeper;
 
 import java.net.DatagramPacket;
 import java.nio.ByteBuffer;
@@ -35,9 +33,9 @@ import static org.mockito.Mockito.when;
 @RunWith(MockitoJUnitRunner.class)
 public class StateTxInitTest {
     @Mock
-    DataSink spkr;
+    SignalSink spkr;
     @Mock
-    DataSource mic;
+    SignalSource mic;
     @Mock
     UDPService udpService;
     @Mock

@@ -47,12 +47,12 @@ public class StateRxing extends StateNode{
                 break;
             case ProtocolBase.PTYPE_CALL_DATA:
                 mSub.mLogger.d(mSub.TAG, "rxed callData");
-                mSub.mSpkr.offerData(((CallData) proto).getAudioData(), proto.getSequence());
+                mSub.mSpkr.offer(((CallData) proto).getAudioData(), proto.getSequence());
                 break;
             case ProtocolBase.PTYPE_CALL_TERM:
                 mSub.mLogger.d(mSub.TAG, "rxed callTerm");
                 ByteBuffer eof = ByteBuffer.allocate(0);
-                mSub.mSpkr.offerData( eof, proto.getSequence());
+                mSub.mSpkr.offer(eof, proto.getSequence());
                 break;
         }
     }

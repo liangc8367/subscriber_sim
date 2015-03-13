@@ -1,7 +1,7 @@
-package test.com.bluesky.core;
+package test.com.bluesky.core.subscriber;
 
-import com.bluesky.DataSink;
-import com.bluesky.DataSource;
+import com.bluesky.core.dsp.SignalSink;
+import com.bluesky.core.dsp.SignalSource;
 import com.bluesky.common.GlobalConstants;
 import com.bluesky.common.NamedTimerTask;
 import com.bluesky.common.OLog;
@@ -18,8 +18,8 @@ import org.mockito.Mockito;
 import static junit.framework.TestCase.assertEquals;
 import static org.mockito.Mockito.*;
 import org.mockito.runners.MockitoJUnitRunner;
-import test.com.bluesky.core.helpers.PayloadMatcher;
-import test.com.bluesky.core.helpers.SubscriberPeeper;
+import test.com.bluesky.core.subscriber.helpers.PayloadMatcher;
+import test.com.bluesky.core.subscriber.helpers.SubscriberPeeper;
 
 import java.net.DatagramPacket;
 import java.nio.ByteBuffer;
@@ -30,9 +30,9 @@ import java.nio.ByteBuffer;
 @RunWith(MockitoJUnitRunner.class)
 public class StateOfflineTest {
     @Mock
-    DataSink spkr;
+    SignalSink spkr;
     @Mock
-    DataSource mic;
+    SignalSource mic;
     @Mock
     UDPService udpService;
     @Mock
