@@ -20,7 +20,8 @@ public class StateNode {
     public void entry(){}
     public void exit(){}
     public void ptt(boolean pressed){}
-    public void timerExpired(NamedTimerTask timerTask){}
+    public void fineTimerExpired(){}
+    public void coarseTimerExpired(){}
     public void packetReceived(DatagramPacket packet){}
     public void rxEnd(){}
     public void txEnd(){}

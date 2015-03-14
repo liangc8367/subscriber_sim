@@ -6,6 +6,7 @@ import com.bluesky.common.GlobalConstants;
 import com.bluesky.common.NamedTimerTask;
 import com.bluesky.common.OLog;
 import com.bluesky.common.UDPService;
+import com.bluesky.core.hal.ReferenceClock;
 import com.bluesky.core.subscriber.*;
 
 import com.bluesky.protocol.CallData;
@@ -22,6 +23,8 @@ import org.mockito.runners.MockitoJUnitRunner;
 
 import java.net.DatagramPacket;
 import java.nio.ByteBuffer;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import test.com.bluesky.core.subscriber.helpers.SubscriberPeeper;
 
@@ -37,28 +40,23 @@ public class StateOnlineTest {
     @Mock
     UDPService udpService;
     @Mock
-    SubscriberExecContext execCtx;
+    ScheduledExecutorService executor;
     @Mock
     OLog logger;
+    @Mock
+    ReferenceClock clock;
 
     final Configuration config = new Configuration();
-    final NamedTimerTask timerTask = new NamedTimerTask(20) {
-        @Override
-        public void run() {
-
-        }
-    };
-
     Subscriber su;
     StateOnline stateOnline;
 
     private void setup() throws Exception{
         Mockito.reset(udpService);
-        Mockito.reset(execCtx);
-        stub(execCtx.createTimerTask()).toReturn(timerTask);
+        Mockito.reset(executor);
+        Mockito.reset(clock);
 
         config.mSuid = 100;
-        su = new Subscriber(config, execCtx, mic, spkr, udpService, logger);
+        su = new Subscriber(config, executor, mic, spkr, udpService, clock, logger);
         SubscriberPeeper peeper = new SubscriberPeeper();
         peeper.setState(su, State.ONLINE);
 
@@ -77,10 +75,10 @@ public class StateOnlineTest {
         setup();
         stateOnline.entry();
 
-        Mockito.verify(execCtx, times(1)).createTimerTask();
-        Mockito.verify(execCtx, times(1)).schedule(any(NamedTimerTask.class), eq(GlobalConstants.REGISTRATION_RETRY_MAX_TIME));
+        Mockito.verify(executor, times(1)).
+                schedule(any(Runnable.class), eq(GlobalConstants.REGISTRATION_RETRY_MAX_TIME), eq(TimeUnit.MILLISECONDS));
 
-        stateOnline.timerExpired(timerTask);
+        stateOnline.coarseTimerExpired();
         SubscriberPeeper peeper = new SubscriberPeeper();
         assertEquals(State.OFFLINE, peeper.peepState(su));
     }

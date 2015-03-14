@@ -3,6 +3,7 @@ package test.com.bluesky.core.subscriber;
 import com.bluesky.core.dsp.SignalSink;
 import com.bluesky.core.dsp.SignalSource;
 import com.bluesky.common.*;
+import com.bluesky.core.hal.ReferenceClock;
 import com.bluesky.core.subscriber.*;
 import com.bluesky.protocol.CallInit;
 import com.bluesky.protocol.CallTerm;
@@ -16,6 +17,8 @@ import test.com.bluesky.core.subscriber.helpers.SubscriberPeeper;
 
 import java.net.DatagramPacket;
 import java.nio.ByteBuffer;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import static junit.framework.TestCase.assertEquals;
 import static org.mockito.AdditionalMatchers.leq;
@@ -38,9 +41,11 @@ public class StateTxStoppingTest {
     @Mock
     UDPService udpService;
     @Mock
-    SubscriberExecContext execCtx;
+    ScheduledExecutorService executor;
     @Mock
     OLog logger;
+    @Mock
+    ReferenceClock clock;
 
     final Configuration config = new Configuration();
     final NamedTimerTask timerTask = new NamedTimerTask(20) {
@@ -55,16 +60,16 @@ public class StateTxStoppingTest {
 
     private void setup() throws Exception{
         Mockito.reset(udpService);
-        Mockito.reset(execCtx);
-        stub(execCtx.createTimerTask()).toReturn(timerTask);
-        when(execCtx.currentTimeMillis())
+        Mockito.reset(executor);
+        Mockito.reset(clock);
+        when(clock.currentTimeMillis())
                 .thenReturn(250L) // entry, for first packet@100L, seq=1, last audio seq = 8
                 .thenReturn(261L) // sent #1
                 .thenReturn(283L) // sent #2
                 .thenReturn(301L); // sent #3
         config.mSuid = 100;
         config.mTgtid = 1000;
-        su = new Subscriber(config, execCtx, mic, spkr, udpService, logger);
+        su = new Subscriber(config, executor, mic, spkr, udpService, clock, logger);
         SubscriberPeeper peeper = new SubscriberPeeper();
         peeper.setState(su, State.TX_STOPPING);
 
@@ -90,12 +95,12 @@ public class StateTxStoppingTest {
 
         stateTxStopping.entry();
 
-        stateTxStopping.timerExpired(timerTask);
-        stateTxStopping.timerExpired(timerTask);
-        stateTxStopping.timerExpired(timerTask);
+        stateTxStopping.fineTimerExpired();
+        stateTxStopping.fineTimerExpired();
+        stateTxStopping.fineTimerExpired();
 
-        Mockito.verify(execCtx, times(3)).createTimerTask();
-        Mockito.verify(execCtx, times(3)).schedule(any(NamedTimerTask.class), leq(GlobalConstants.CALL_PACKET_INTERVAL));
+        Mockito.verify(executor, times(3)).
+                schedule(any(Runnable.class), leq(GlobalConstants.CALL_PACKET_INTERVAL), eq(TimeUnit.MILLISECONDS));
         Mockito.verify(udpService, times(3)).send((ByteBuffer) argThat(
                 new PayloadMatcher(
                         config.mTgtid,
@@ -116,7 +121,7 @@ public class StateTxStoppingTest {
 
         stateTxStopping.entry();
 
-        stateTxStopping.timerExpired(timerTask); // to send callTerm
+        stateTxStopping.fineTimerExpired();
 
         long target=2000, source = 200;
         short seq = 20;
@@ -142,7 +147,7 @@ public class StateTxStoppingTest {
 
         stateTxStopping.entry();
 
-        stateTxStopping.timerExpired(timerTask); // to send callTerm
+        stateTxStopping.fineTimerExpired();
 
         long target=2000, source = 200;
         short seq = 20;
@@ -171,7 +176,7 @@ public class StateTxStoppingTest {
 
         stateTxStopping.entry();
 
-        stateTxStopping.timerExpired(timerTask); // to send callTerm
+        stateTxStopping.fineTimerExpired();
 
         short seq = 20;
         CallInit callInit = new CallInit(config.mTgtid, config.mSuid, seq);

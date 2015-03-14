@@ -8,6 +8,7 @@ import com.bluesky.protocol.ProtocolBase;
 import com.bluesky.protocol.ProtocolFactory;
 
 import java.net.DatagramPacket;
+import java.util.concurrent.TimeUnit;
 
 /** online state, idle
  *  - ptt pressed: transit to call init state
@@ -23,17 +24,18 @@ public class StateOnline extends StateNode {
     public StateOnline(Subscriber sub){
         super(sub);
     }
+
+    @Override
     public void entry(){
         mSub.mLogger.d(mSub.TAG, "entry Online");
-        mKeepAliveTimer = mSub.mExecCtx.createTimerTask();
-        mSub.mExecCtx.schedule(mKeepAliveTimer, GlobalConstants.REGISTRATION_RETRY_MAX_TIME);
+        mSub.mScheduledCoarseTimer = mSub.mExecutor.
+                schedule(mSub.mCoarseTimer, GlobalConstants.REGISTRATION_RETRY_MAX_TIME, TimeUnit.MILLISECONDS);
     };
+
+    @Override
     public void exit(){
         mSub.mLogger.d(mSub.TAG, "exit Online");
-        if(mKeepAliveTimer != null){
-            mKeepAliveTimer.cancel();
-            mKeepAliveTimer = null;
-        }
+        mSub.cancelCoarseTimer();
     }
 
     @Override
@@ -69,13 +71,10 @@ public class StateOnline extends StateNode {
         }
     }
 
-    public void timerExpired(NamedTimerTask timer){
-        if( timer != mKeepAliveTimer ){
-            return;
-        }
+    @Override
+    public void coarseTimerExpired(){
         mSub.mLogger.d(mSub.TAG, "keepalive timed out");
         mSub.mState = State.OFFLINE;
     }
 
-    private NamedTimerTask mKeepAliveTimer = null;
 }

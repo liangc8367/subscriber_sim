@@ -9,6 +9,7 @@ import com.bluesky.protocol.ProtocolBase;
 import com.bluesky.protocol.ProtocolFactory;
 
 import java.net.DatagramPacket;
+import java.util.concurrent.TimeUnit;
 
 /**
  * call init state:
@@ -25,7 +26,7 @@ public class StateTxInit extends StateNode{
     @Override
     public void entry() {
         mSub.mLogger.d(mSub.TAG, "enter call init");
-        mSub.mFirstPktTime = mSub.mExecCtx.currentTimeMillis();
+        mSub.mFirstPktTime = mSub.mClock.currentTimeMillis();
         mSub.sendCallInit();
         mSub.mFirstPktSeqNumber = mSub.mSeqNumber;
         armTxTimer();
@@ -35,10 +36,7 @@ public class StateTxInit extends StateNode{
     @Override
     public void exit() {
         mSub.mLogger.d(mSub.TAG, "exit call init");
-        if( mTxTimer != null){
-            mTxTimer.cancel();
-            mTxTimer = null;
-        }
+        mSub.cancelFineTimer();
     }
 
     @Override
@@ -76,45 +74,38 @@ public class StateTxInit extends StateNode{
     }
 
     @Override
-    public void timerExpired(NamedTimerTask timerTask) {
-        if( timerTask == mTxTimer){
-            int numSent = mSub.mSeqNumber + 1 - mSub.mFirstPktSeqNumber;
-            if( numSent >= 3 ){
-                mSub.mLogger.d(mSub.TAG, "we've sent " + numSent +" callInit" + ", channel granted=" + mbChannelGranted);
-                if( mbChannelGranted ){
-                    mSub.mState = State.TX;
-                } else {
-                    mSub.mState = State.ONLINE;
-                }
+    public void fineTimerExpired() {
+        int numSent = mSub.mSeqNumber + 1 - mSub.mFirstPktSeqNumber;
+        if( numSent >= 3 ){
+            mSub.mLogger.d(mSub.TAG, "we've sent " + numSent +" callInit" + ", channel granted=" + mbChannelGranted);
+            if( mbChannelGranted ){
+                mSub.mState = State.TX;
             } else {
-                mSub.mLogger.d(mSub.TAG, "tx timer timed out, " + numSent);
-                mSub.sendCallInit();
-                rearmTxTimer();
+                mSub.mState = State.ONLINE;
             }
+        } else {
+            mSub.mLogger.d(mSub.TAG, "tx timer timed out, " + numSent);
+            mSub.sendCallInit();
+            rearmTxTimer();
         }
     }
 
     private void armTxTimer(){
-        long timeNow = mSub.mExecCtx.currentTimeMillis();
-        mTxTimer = mSub.mExecCtx.createTimerTask();
+        long timeNow = mSub.mClock.currentTimeMillis();
         long delay = GlobalConstants.CALL_PACKET_INTERVAL* (mSub.mSeqNumber + 1 - mSub.mFirstPktSeqNumber)
                 - (int)((timeNow - mSub.mFirstPktTime));
         if(delay < 0) {
             mSub.mLogger.w(mSub.TAG, "negative delay:" + delay);
-            // try to catch up
-            timerExpired(mTxTimer);
+            delay = 1;
         } else {
-            mSub.mExecCtx.schedule(mTxTimer, delay);
+            mSub.mScheduledFineTimer = mSub.mExecutor.schedule(mSub.mFineTimer, delay, TimeUnit.MILLISECONDS);
         }
     }
 
     private void rearmTxTimer(){
-        if(mTxTimer !=null){
-            mTxTimer.cancel();
-        }
+        mSub.cancelFineTimer();
         armTxTimer();
     }
 
-    private NamedTimerTask mTxTimer;
     private boolean mbChannelGranted;
 }

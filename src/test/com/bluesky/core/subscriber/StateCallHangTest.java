@@ -1,10 +1,12 @@
 package test.com.bluesky.core.subscriber;
 
+import com.bluesky.common.GlobalConstants;
 import com.bluesky.core.dsp.SignalSink;
 import com.bluesky.core.dsp.SignalSource;
 import com.bluesky.common.NamedTimerTask;
 import com.bluesky.common.OLog;
 import com.bluesky.common.UDPService;
+import com.bluesky.core.hal.ReferenceClock;
 import com.bluesky.core.subscriber.*;
 
 import com.bluesky.protocol.CallData;
@@ -21,6 +23,8 @@ import org.mockito.runners.MockitoJUnitRunner;
 
 import java.net.DatagramPacket;
 import java.nio.ByteBuffer;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import test.com.bluesky.core.subscriber.helpers.SubscriberPeeper;
 
@@ -36,9 +40,11 @@ public class StateCallHangTest {
     @Mock
     UDPService udpService;
     @Mock
-    SubscriberExecContext execCtx;
-    @Mock
     OLog logger;
+    @Mock
+    ReferenceClock clock;
+    @Mock
+    ScheduledExecutorService executor;
 
     final Configuration config = new Configuration();
     final NamedTimerTask timerTask = new NamedTimerTask(20) {
@@ -54,11 +60,10 @@ public class StateCallHangTest {
 
     private void setup() throws Exception {
         Mockito.reset(udpService);
-        Mockito.reset(execCtx);
-        stub(execCtx.createTimerTask()).toReturn(timerTask);
+        Mockito.reset(executor);
 
         config.mSuid = src;
-        su = new Subscriber(config, execCtx, mic, spkr, udpService, logger);
+        su = new Subscriber(config, executor, mic, spkr, udpService, clock, logger);
         SubscriberPeeper peeper = new SubscriberPeeper();
         peeper.setState(su, State.CALL_HANG);
         peeper.peepCallInfo(su).mSourceId = config.mSuid;
@@ -79,7 +84,8 @@ public class StateCallHangTest {
     public void test_callHang_ptt_pressed() throws Exception {
         setup();
         stateCallHang.entry();
-
+        Mockito.verify(executor, times(1)).
+                schedule(any(Runnable.class), eq(GlobalConstants.CALL_HANG_PERIOD), eq(TimeUnit.MILLISECONDS) );
         stateCallHang.ptt(true);
         SubscriberPeeper peeper = new SubscriberPeeper();
         assertEquals(State.TX_INIT, peeper.peepState(su));
@@ -214,7 +220,7 @@ public class StateCallHangTest {
         setup();
         stateCallHang.entry();
 
-        stateCallHang.timerExpired(timerTask);
+        stateCallHang.coarseTimerExpired();
         SubscriberPeeper peeper = new SubscriberPeeper();
         assertEquals(State.ONLINE, peeper.peepState(su));
 

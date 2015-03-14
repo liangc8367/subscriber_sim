@@ -3,11 +3,14 @@ package com.bluesky.core.subscriber;
 import com.bluesky.core.dsp.SignalSink;
 import com.bluesky.core.dsp.SignalSource;
 import com.bluesky.common.*;
+import com.bluesky.core.hal.ReferenceClock;
 import com.bluesky.protocol.*;
 
 import java.net.DatagramPacket;
 import java.nio.ByteBuffer;
 import java.util.EnumMap;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 
 /** subscriber state machine, all methods should be called in the same thread context.
  *
@@ -18,13 +21,18 @@ public class Subscriber {
         public void stateChanged(State newState);
     }
 
-    public Subscriber(Configuration config, SubscriberExecContext execCtx, /*ExecutorService exec,*/ SignalSource mic, SignalSink spkr, UDPService udpService, OLog logger){
+    public Subscriber(Configuration config, ScheduledExecutorService executor,
+                      SignalSource mic, SignalSink spkr,
+                      UDPService udpService, ReferenceClock clock,
+                      OLog logger)
+    {
         mConfig = config;
         mMic = mic;
         mSpkr = spkr;
         mUdpSvc = udpService;
         mLogger = logger;
-        mExecCtx = execCtx; //new SubscriberExecContext(this, exec,mUdpSvc, mLogger);
+        mExecutor = executor;
+        mClock = clock;
         initializeSM();
     }
 
@@ -50,9 +58,15 @@ public class Subscriber {
         updateStateContext();
     }
 
-    public void timerExpired(NamedTimerTask timerTask){
+    public void fineTimerExpired(){
         saveStateContext();
-        mStateNode.timerExpired(timerTask);
+        mStateNode.fineTimerExpired();
+        updateStateContext();
+    }
+
+    public void coarseTimerExpired(){
+        saveStateContext();
+        mStateNode.coarseTimerExpired();
         updateStateContext();
     }
 
@@ -155,18 +169,63 @@ public class Subscriber {
         mCallInfo.mSourceId = source;
     }
 
+    ////////////////// time related //////////////////////
+    boolean cancelFineTimer(){
+        if(mScheduledFineTimer !=null){
+            boolean res = mScheduledFineTimer.cancel(false); // not allow to interrupt the execution thread
+            mScheduledFineTimer = null;
+            return res;
+        }
+        return false;
+    }
+
+    boolean cancelCoarseTimer(){
+        if(mScheduledCoarseTimer !=null){
+            boolean res = mScheduledCoarseTimer.cancel(false); // not allow to interrupt the execution thread
+            mScheduledCoarseTimer = null;
+            return res;
+        }
+        return false;
+    }
+
+
+    class FineTimer implements Runnable {
+        @Override
+        public void run(){
+            Subscriber.this.fineTimerExpired();
+        }
+    }
+
+    class CoarseTimer implements Runnable {
+        @Override
+        public void run(){
+            Subscriber.this.coarseTimerExpired();
+        }
+    }
+
+    FineTimer mFineTimer = new FineTimer();
+    CoarseTimer mCoarseTimer = new CoarseTimer();
+    ScheduledFuture mScheduledFineTimer, mScheduledCoarseTimer;
+
+
+    /////////////// configurations /////////////////////
     Configuration mConfig;
     CallInformation mCallInfo = new CallInformation();
+    ScheduledExecutorService mExecutor;
     final SignalSource mMic;
     final SignalSink mSpkr;
     final UDPService mUdpSvc;
     final OLog mLogger;
-    final SubscriberExecContext mExecCtx;
+    final ReferenceClock mClock;
     final static String TAG = "Su";
 
-    private SubscriberStateListener mStateListener = null;
+    /////////////// attributes /////////////////////////
+    short mSeqNumber = 0;
+    short mFirstPktSeqNumber, mLastPktSeqNumber;
+    long mFirstPktTime; // in milliseconds
 
 
+    ////////////////// state machine related ///////////////
     private void initializeSM(){
         StateNode aState;
         aState = new StateOffline(this);
@@ -188,9 +247,8 @@ public class Subscriber {
         mStateNode = mStateMap.get(mState);
     }
 
-    short mSeqNumber = 0;
-    short mFirstPktSeqNumber, mLastPktSeqNumber;
-    long mFirstPktTime; // in milliseconds
+    private SubscriberStateListener mStateListener = null;
+
     State   mState;
 
     private State mStateOrig;

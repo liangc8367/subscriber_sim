@@ -8,6 +8,7 @@ import com.bluesky.protocol.ProtocolBase;
 import com.bluesky.protocol.ProtocolFactory;
 
 import java.net.DatagramPacket;
+import java.util.concurrent.TimeUnit;
 
 /**
  * initial/offline state, start registration process
@@ -17,32 +18,30 @@ public class StateOffline extends StateNode {
         super(sub);
     }
 
+    @Override
     public void entry(){
         mSub.mLogger.d(mSub.TAG, "entry Offline");
         mSub.sendRegistration();
-        mRegistrationTimer = mSub.mExecCtx.createTimerTask();
-        mSub.mExecCtx.schedule(mRegistrationTimer, GlobalConstants.REGISTRATION_RETRY_TIME);
+        mSub.mScheduledCoarseTimer = mSub.mExecutor.
+                schedule(mSub.mCoarseTimer, GlobalConstants.REGISTRATION_RETRY_TIME, TimeUnit.MILLISECONDS);
         ++mRegAttempts;
     };
+    @Override
     public void exit(){
-        if( mRegistrationTimer != null ){
-            mRegistrationTimer.cancel();
-            mRegistrationTimer = null;
-        }
+        mSub.cancelCoarseTimer();
         mRegAttempts = 0;
         mSub.mLogger.d(mSub.TAG, "exit Offline");
     };
 
-    public void timerExpired(NamedTimerTask timer){
-        if( timer != mRegistrationTimer ){
-            return;
-        }
+    @Override
+    public void coarseTimerExpired(){
         mSub.sendRegistration();
-        mRegistrationTimer = mSub.mExecCtx.createTimerTask();
-        mSub.mExecCtx.schedule(mRegistrationTimer, GlobalConstants.REGISTRATION_RETRY_TIME);
+        mSub.mScheduledCoarseTimer = mSub.mExecutor.
+                schedule(mSub.mCoarseTimer, GlobalConstants.REGISTRATION_RETRY_TIME, TimeUnit.MILLISECONDS);
         ++mRegAttempts;
     }
 
+    @Override
     public void packetReceived(DatagramPacket packet){
         mSub.mLogger.d(mSub.TAG, "rxed: " + ProtocolHelpers.peepProtocol(packet));
         ProtocolBase proto = ProtocolFactory.getProtocol(packet);
@@ -56,7 +55,6 @@ public class StateOffline extends StateNode {
         }
     }
 
-    private NamedTimerTask mRegistrationTimer = null;
     private int mRegAttempts = 0;
 
 }

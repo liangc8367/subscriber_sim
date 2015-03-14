@@ -6,6 +6,7 @@ import com.bluesky.common.GlobalConstants;
 import com.bluesky.common.NamedTimerTask;
 import com.bluesky.common.OLog;
 import com.bluesky.common.UDPService;
+import com.bluesky.core.hal.ReferenceClock;
 import com.bluesky.core.subscriber.*;
 
 import com.bluesky.protocol.Ack;
@@ -23,6 +24,8 @@ import test.com.bluesky.core.subscriber.helpers.SubscriberPeeper;
 
 import java.net.DatagramPacket;
 import java.nio.ByteBuffer;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by liangc on 08/03/15.
@@ -36,9 +39,11 @@ public class StateOfflineTest {
     @Mock
     UDPService udpService;
     @Mock
-    SubscriberExecContext execCtx;
+    ScheduledExecutorService exectuor;
     @Mock
     OLog logger;
+    @Mock
+    ReferenceClock clock;
 
     final Configuration config = new Configuration();
     final NamedTimerTask timerTask = new NamedTimerTask(20) {
@@ -53,11 +58,11 @@ public class StateOfflineTest {
 
     private void setup() throws Exception{
         Mockito.reset(udpService);
-        Mockito.reset(execCtx);
-        stub(execCtx.createTimerTask()).toReturn(timerTask);
+        Mockito.reset(clock);
+        Mockito.reset(exectuor);
 
         config.mSuid = 100;
-        su = new Subscriber(config, execCtx, mic, spkr, udpService, logger);
+        su = new Subscriber(config, exectuor, mic, spkr, udpService, clock, logger);
         SubscriberPeeper peeper = new SubscriberPeeper();
         peeper.setState(su, State.OFFLINE);
 
@@ -69,8 +74,8 @@ public class StateOfflineTest {
         setup();
 
         stateOffline.entry();
-        Mockito.verify(execCtx, times(1)).createTimerTask();
-        Mockito.verify(execCtx, times(1)).schedule(any(NamedTimerTask.class), eq(GlobalConstants.REGISTRATION_RETRY_TIME));
+        Mockito.verify(exectuor, times(1)).
+                schedule(any(Runnable.class), eq(GlobalConstants.REGISTRATION_RETRY_TIME), eq(TimeUnit.MILLISECONDS));
         Mockito.verify(udpService, times(1)).send((ByteBuffer) argThat(
                 new PayloadMatcher(GlobalConstants.SUID_TRUNK_MANAGER,
                         config.mSuid,
@@ -81,9 +86,9 @@ public class StateOfflineTest {
     public void test_offline_timer_expired() throws Exception {
         setup();
         stateOffline.entry();
-        stateOffline.timerExpired(timerTask);
-        Mockito.verify(execCtx, times(2)).createTimerTask();
-        Mockito.verify(execCtx, times(2)).schedule(any(NamedTimerTask.class), eq(GlobalConstants.REGISTRATION_RETRY_TIME));
+        stateOffline.coarseTimerExpired();
+        Mockito.verify(exectuor, times(2)).
+                schedule(any(Runnable.class), eq(GlobalConstants.REGISTRATION_RETRY_TIME), eq(TimeUnit.MILLISECONDS));
         Mockito.verify(udpService, times(2)).send((ByteBuffer) argThat(
                 new PayloadMatcher(GlobalConstants.SUID_TRUNK_MANAGER,
                         config.mSuid,

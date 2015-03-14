@@ -8,6 +8,7 @@ import com.bluesky.protocol.ProtocolBase;
 import com.bluesky.protocol.ProtocolFactory;
 
 import java.net.DatagramPacket;
+import java.util.concurrent.TimeUnit;
 
 /** tx stopping state
  *  - send 3 call term, in 20ms interval, and transit to call hang
@@ -30,24 +31,19 @@ public class StateTxStopping extends StateNode {
     @Override
     public void exit() {
         mSub.mLogger.d(mSub.TAG, "exit tx stopping");
-        if( mTxTimer != null){
-            mTxTimer.cancel();
-            mTxTimer = null;
-        }
+        mSub.cancelFineTimer();
     }
 
     @Override
-    public void timerExpired(NamedTimerTask timerTask) {
-        if( timerTask == mTxTimer){
-            mSub.sendCallTerm();
-            int numSent = mSub.mSeqNumber - mSub.mLastPktSeqNumber;
-            if( numSent >= 3 ){
-                mSub.mLogger.d(mSub.TAG, "we've sent " + numSent +" callTerm");
-                mSub.mState = State.CALL_HANG;
-            } else {
-                mSub.mLogger.d(mSub.TAG, "tx timer timed out, " + numSent);
-                rearmTxTimer();
-            }
+    public void fineTimerExpired() {
+        mSub.sendCallTerm();
+        int numSent = mSub.mSeqNumber - mSub.mLastPktSeqNumber;
+        if( numSent >= 3 ){
+            mSub.mLogger.d(mSub.TAG, "we've sent " + numSent +" callTerm");
+            mSub.mState = State.CALL_HANG;
+        } else {
+            mSub.mLogger.d(mSub.TAG, "tx timer timed out, " + numSent);
+            rearmTxTimer();
         }
     }
 
@@ -86,22 +82,20 @@ public class StateTxStopping extends StateNode {
     }
 
     private void armTxTimer(){
-        long timeNow = mSub.mExecCtx.currentTimeMillis();
-        mTxTimer = mSub.mExecCtx.createTimerTask();
+        long timeNow = mSub.mClock.currentTimeMillis();
         long delay = GlobalConstants.CALL_PACKET_INTERVAL* (mSub.mSeqNumber + 1 - mSub.mFirstPktSeqNumber)
                         + mSub.mFirstPktTime - timeNow;
         if(delay < 0) {
             mSub.mLogger.w(mSub.TAG, "negative delay:" + delay);
+            delay = 1;
         }
-        mSub.mExecCtx.schedule(mTxTimer, delay);
+        mSub.mScheduledFineTimer = mSub.mExecutor.
+            schedule(mSub.mFineTimer, delay, TimeUnit.MILLISECONDS);
     }
 
     private void rearmTxTimer(){
-        if(mTxTimer !=null){
-            mTxTimer.cancel();
-        }
+        mSub.cancelFineTimer();
         armTxTimer();
     }
 
-    private NamedTimerTask mTxTimer;
 }

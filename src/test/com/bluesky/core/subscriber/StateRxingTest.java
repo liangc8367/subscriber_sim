@@ -6,6 +6,7 @@ import com.bluesky.common.CallInformation;
 import com.bluesky.common.NamedTimerTask;
 import com.bluesky.common.OLog;
 import com.bluesky.common.UDPService;
+import com.bluesky.core.hal.ReferenceClock;
 import com.bluesky.core.subscriber.*;
 import com.bluesky.protocol.CallData;
 import com.bluesky.protocol.CallTerm;
@@ -18,6 +19,7 @@ import test.com.bluesky.core.subscriber.helpers.SubscriberPeeper;
 
 import java.net.DatagramPacket;
 import java.nio.ByteBuffer;
+import java.util.concurrent.ScheduledExecutorService;
 
 import static junit.framework.TestCase.assertEquals;
 import static org.mockito.Matchers.any;
@@ -39,28 +41,24 @@ public class StateRxingTest {
     @Mock
     UDPService udpService;
     @Mock
-    SubscriberExecContext execCtx;
+    ScheduledExecutorService executor;
     @Mock
     OLog logger;
+    @Mock
+    ReferenceClock clock;
 
     final Configuration config = new Configuration();
-    final NamedTimerTask timerTask = new NamedTimerTask(20) {
-        @Override
-        public void run() {
-
-        }
-    };
 
     Subscriber su;
     StateRxing stateRxing;
 
     private void setup() throws Exception{
         Mockito.reset(udpService);
-        Mockito.reset(execCtx);
-        stub(execCtx.createTimerTask()).toReturn(timerTask);
+        Mockito.reset(clock);
+        Mockito.reset(executor);
 
         config.mSuid = 100;
-        su = new Subscriber(config, execCtx, mic, spkr, udpService, logger);
+        su = new Subscriber(config, executor, mic, spkr, udpService, clock, logger);
         SubscriberPeeper peeper = new SubscriberPeeper();
         peeper.setState(su, State.RX);
 

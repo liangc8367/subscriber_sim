@@ -8,6 +8,7 @@ import com.bluesky.protocol.ProtocolBase;
 import com.bluesky.protocol.ProtocolFactory;
 
 import java.net.DatagramPacket;
+import java.util.concurrent.TimeUnit;
 
 /** call hang state
  *  - callInit: to call rxing
@@ -24,17 +25,15 @@ public class StateCallHang extends StateNode {
     @Override
     public void entry() {
         mSub.mLogger.d(mSub.TAG, "enter Hang");
-        mCallHangGuardTimer = mSub.mExecCtx.createTimerTask();
-        mSub.mExecCtx.schedule(mCallHangGuardTimer, GlobalConstants.CALL_HANG_PERIOD); //hmm... should be 20ms*x, x<5
+        mSub.mScheduledCoarseTimer = mSub.mExecutor.schedule(mSub.mCoarseTimer,
+                GlobalConstants.CALL_HANG_PERIOD,
+                TimeUnit.MILLISECONDS); //hmm... should be 20ms*x, x<5
     }
 
     @Override
     public void exit() {
         mSub.mLogger.d(mSub.TAG, "exit Hang");
-        if( mCallHangGuardTimer!=null){
-            mCallHangGuardTimer.cancel();
-            mCallHangGuardTimer = null;
-        }
+        mSub.cancelCoarseTimer();
     }
 
     @Override
@@ -46,11 +45,9 @@ public class StateCallHang extends StateNode {
     }
 
     @Override
-    public void timerExpired(NamedTimerTask timerTask) {
-        if( timerTask == mCallHangGuardTimer){
-            mSub.mLogger.d(mSub.TAG, "hang gard timed out");
-            mSub.mState = State.ONLINE;
-        }
+    public void coarseTimerExpired() {
+        mSub.mLogger.d(mSub.TAG, "hang gard timed out");
+        mSub.mState = State.ONLINE;
     }
 
     @Override
@@ -78,13 +75,11 @@ public class StateCallHang extends StateNode {
                     mSub.mLogger.d(mSub.TAG, "rxed callTerm");
                     mSub.recordCallInfo(proto.getTarget(), proto.getSource());
                 }
-                mCallHangGuardTimer.cancel();
-                mCallHangGuardTimer = mSub.mExecCtx.createTimerTask();
-                mSub.mExecCtx.schedule(mCallHangGuardTimer, GlobalConstants.CALL_HANG_PERIOD);
+                mSub.cancelCoarseTimer();
+                mSub.mScheduledCoarseTimer = mSub.mExecutor.schedule(
+                        mSub.mCoarseTimer, GlobalConstants.CALL_HANG_PERIOD, TimeUnit.MILLISECONDS);
                 break;
         }
     }
-
-    private NamedTimerTask mCallHangGuardTimer;
 
 }

@@ -3,6 +3,7 @@ package test.com.bluesky.core.subscriber;
 import com.bluesky.core.dsp.SignalSink;
 import com.bluesky.core.dsp.SignalSource;
 import com.bluesky.common.*;
+import com.bluesky.core.hal.ReferenceClock;
 import com.bluesky.core.subscriber.*;
 import com.bluesky.protocol.CallData;
 import org.junit.Test;
@@ -14,6 +15,7 @@ import test.com.bluesky.core.subscriber.helpers.PayloadMatcher;
 import test.com.bluesky.core.subscriber.helpers.SubscriberPeeper;
 
 import java.nio.ByteBuffer;
+import java.util.concurrent.ScheduledExecutorService;
 
 import static junit.framework.TestCase.assertEquals;
 import static org.mockito.AdditionalMatchers.leq;
@@ -36,9 +38,11 @@ public class StateTxTest {
     @Mock
     UDPService udpService;
     @Mock
-    SubscriberExecContext execCtx;
+    ScheduledExecutorService executor;
     @Mock
     OLog logger;
+    @Mock
+    ReferenceClock clock;
 
     final Configuration config = new Configuration();
     final NamedTimerTask timerTask = new NamedTimerTask(20) {
@@ -53,9 +57,8 @@ public class StateTxTest {
 
     private void setup() throws Exception{
         Mockito.reset(udpService);
-        Mockito.reset(execCtx);
-        stub(execCtx.createTimerTask()).toReturn(timerTask);
-        when(execCtx.currentTimeMillis())
+        Mockito.reset(executor);
+        when(clock.currentTimeMillis())
                 .thenReturn(100L)
                 .thenReturn(102L) // sent #1
                 .thenReturn(122L) // sent #2
@@ -63,7 +66,7 @@ public class StateTxTest {
                 .thenReturn(161L); // fall to online
         config.mSuid = 100;
         config.mTgtid = 1000;
-        su = new Subscriber(config, execCtx, mic, spkr, udpService, logger);
+        su = new Subscriber(config, executor, mic, spkr, udpService, clock, logger);
         SubscriberPeeper peeper = new SubscriberPeeper();
         peeper.setState(su, State.TX);
 
