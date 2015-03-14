@@ -1,17 +1,20 @@
-package com.bluesky;
+package com.bluesky.main;
 
 import com.bluesky.common.GlobalConstants;
 import com.bluesky.common.UDPService;
 import com.bluesky.common.XLog;
 import com.bluesky.core.dsp.SignalSink;
 import com.bluesky.core.dsp.SignalSource;
+import com.bluesky.core.hal.ReferenceClock;
 import com.bluesky.core.subscriber.Configuration;
 import com.bluesky.core.dsp.stubs.MicSim;
 import com.bluesky.core.dsp.stubs.SpkrSim;
+import com.bluesky.core.subscriber.Subscriber;
+import com.bluesky.core.subscriber.SubscriberAssembler;
 
 import java.net.InetSocketAddress;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 public class Main {
 
@@ -53,17 +56,20 @@ public class Main {
             System.exit(-2);
         }
 
-        ExecutorService executor = Executors.newSingleThreadExecutor();
+        ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
         Configuration config = new Configuration();
         config.mSuid = suid;
 
-
         SignalSource mic = new MicSim();
         SignalSink spkr = new SpkrSim();
-        //UDPService udpService, OLog logger
 
-//        subscriber su = new subscriber(config, executor, mic, spkr, udpSvc, logger);
-//        su.start();
+        ReferenceClock clock =new ReferenceClock();
+
+        Subscriber sub = SubscriberAssembler.assemble(config, executor, mic, spkr, udpSvc, clock, logger);
+        SimpleUI ui = new SimpleUI(sub);
+        sub.registerStateListener(ui);
+
+        sub.start();
 
         try {
             while (true) {

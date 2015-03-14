@@ -17,7 +17,7 @@ import java.util.concurrent.ScheduledFuture;
  * Created by liangc on 01/02/15.
  */
 public class Subscriber {
-    public interface SubscriberStateListener {
+    public interface StateListener {
         public void stateChanged(State newState);
     }
 
@@ -44,7 +44,7 @@ public class Subscriber {
 
     }
 
-    public void registerStateListener( SubscriberStateListener listener){
+    public void registerStateListener( StateListener listener){
         mStateListener = listener;
     }
 
@@ -98,6 +98,10 @@ public class Subscriber {
         saveStateContext();
         mStateNode.rxEnd();
         updateStateContext();
+    }
+
+    public CallInformation getCallInfo(){
+        return mCallInfo;
     }
 
     private void saveStateContext(){
@@ -247,7 +251,7 @@ public class Subscriber {
         mStateNode = mStateMap.get(mState);
     }
 
-    private SubscriberStateListener mStateListener = null;
+    private StateListener mStateListener = null;
 
     State   mState;
 

@@ -1,9 +1,10 @@
 1. impl exec context
-- timer task, to execute in dedicated thread context
-- udp packet, to execute in dedicated thread context
+- timer task, to execute in dedicated thread context (done, Mar 14))
+- udp packet, to execute in dedicated thread context (done, Mar 14)
 - udp fast path (postpone)
+
+2. integrate subscriber/exec context (started on Mar 14)
 
 2. mic simulator? (just replay recorded file?)
 3. spkr simulator? (just to record incoming data?)
 
-2. integrate subscriber/exec context
