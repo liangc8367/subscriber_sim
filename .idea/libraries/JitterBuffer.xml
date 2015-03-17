@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="JitterBuffer">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/../JitterBuffer/out/artifacts/JitterBuffer_jar/JitterBuffer.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="file://$PROJECT_DIR$/../JitterBuffer/src" />
+    </SOURCES>
+  </library>
+</component>

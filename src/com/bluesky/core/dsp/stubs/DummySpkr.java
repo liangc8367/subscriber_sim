@@ -8,7 +8,7 @@ import java.nio.ByteBuffer;
 /**
  * Created by liangc on 07/02/15.
  */
-public class SpkrSim implements SignalSink {
+public class DummySpkr implements SignalSink {
 
     @Override
     public boolean offer(ByteBuffer data, short sequence) {

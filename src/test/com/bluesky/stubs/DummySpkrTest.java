@@ -11,7 +11,7 @@ import org.junit.After;
 * @since <pre>Mar 11, 2015</pre> 
 * @version 1.0 
 */ 
-public class SpkrSimTest { 
+public class DummySpkrTest {
 
 @Before
 public void before() throws Exception { 

@@ -87,9 +87,8 @@ public class StateTxInitTest {
 
         stateTxInit.fineTimerExpired();
         stateTxInit.fineTimerExpired();
-        stateTxInit.fineTimerExpired();
 
-        Mockito.verify(executor, times(3)).
+        Mockito.verify(executor, times(2)).
                 schedule(any(Runnable.class), leq(GlobalConstants.CALL_PACKET_INTERVAL), eq(TimeUnit.MILLISECONDS));
         Mockito.verify(udpService, times(3)).send((ByteBuffer) argThat(
                 new PayloadMatcher(
@@ -117,9 +116,8 @@ public class StateTxInitTest {
         stateTxInit.packetReceived(pkt);
 
         stateTxInit.fineTimerExpired();
-        stateTxInit.fineTimerExpired();
 
-        Mockito.verify(executor, times(3)).
+        Mockito.verify(executor, times(2)).
                 schedule(any(Runnable.class), leq(GlobalConstants.CALL_PACKET_INTERVAL), eq(TimeUnit.MILLISECONDS));
         Mockito.verify(udpService, times(3)).send((ByteBuffer) argThat(
                 new PayloadMatcher(

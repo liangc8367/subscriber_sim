@@ -75,6 +75,7 @@ public class StateTxInit extends StateNode{
 
     @Override
     public void fineTimerExpired() {
+        mSub.sendCallInit();
         int numSent = mSub.mSeqNumber + 1 - mSub.mFirstPktSeqNumber;
         if( numSent >= 3 ){
             mSub.mLogger.d(mSub.TAG, "we've sent " + numSent +" callInit" + ", channel granted=" + mbChannelGranted);
@@ -85,7 +86,6 @@ public class StateTxInit extends StateNode{
             }
         } else {
             mSub.mLogger.d(mSub.TAG, "tx timer timed out, " + numSent);
-            mSub.sendCallInit();
             rearmTxTimer();
         }
     }

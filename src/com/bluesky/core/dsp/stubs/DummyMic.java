@@ -6,7 +6,7 @@ import com.bluesky.core.dsp.SignalSource;
 /**
  * Created by liangc on 07/02/15.
  */
-public class MicSim implements SignalSource {
+public class DummyMic implements SignalSource {
 
     @Override
     public void register(DataAvailableHandler handler) {

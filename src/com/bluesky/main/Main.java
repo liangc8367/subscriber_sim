@@ -7,8 +7,8 @@ import com.bluesky.core.dsp.SignalSink;
 import com.bluesky.core.dsp.SignalSource;
 import com.bluesky.core.hal.ReferenceClock;
 import com.bluesky.core.subscriber.Configuration;
-import com.bluesky.core.dsp.stubs.MicSim;
-import com.bluesky.core.dsp.stubs.SpkrSim;
+import com.bluesky.core.dsp.stubs.DummyMic;
+import com.bluesky.core.dsp.stubs.DummySpkr;
 import com.bluesky.core.subscriber.Subscriber;
 import com.bluesky.core.subscriber.SubscriberAssembler;
 
@@ -60,8 +60,8 @@ public class Main {
         Configuration config = new Configuration();
         config.mSuid = suid;
 
-        SignalSource mic = new MicSim();
-        SignalSink spkr = new SpkrSim();
+        SignalSource mic = new DummyMic();
+        SignalSink spkr = new DummySpkr();
 
         ReferenceClock clock =new ReferenceClock();
 
