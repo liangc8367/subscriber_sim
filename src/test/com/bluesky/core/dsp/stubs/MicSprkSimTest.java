@@ -14,6 +14,7 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
+import static junit.framework.TestCase.assertEquals;
 import static junit.framework.TestCase.assertTrue;
 
 /**
@@ -37,10 +38,12 @@ public class MicSprkSimTest {
         };
         mic.register(micListener);
 
+        final boolean[] spkrEnd = {false};
         SignalModule.Listener spkrListener = new SignalModule.Listener() {
             @Override
             public void onEndOfLife() {
                 System.out.println("spkr end of life");
+                spkrEnd[0] = true;
             }
         };
         spkr.register(spkrListener);
@@ -78,17 +81,28 @@ public class MicSprkSimTest {
                     ", bad_content= " + stats.bad_content);
         }
 
-        spkr.stop();
         mic.stop();
+
+        int waitCount = 0;
+        while (spkrEnd[0]== false) {
+            Thread.sleep(20);
+            ++waitCount;
+            if(waitCount > 1000){
+                System.out.println("too long wait " + waitCount);
+                break;
+            }
+        }
+//        spkr.stop();
+        System.out.println("waited " + waitCount);
 
         MicNoiseSim.Stats micStats = mic.getStats();
         SpkrNoiseSim.Stats spkrStats = spkr.getStats();
         System.out.println("mic generated=" + micStats.total + ", spkr total = " + spkrStats.total);
         assertTrue(micStats.total > 10);
         assertTrue(spkrStats.total > 10);
-        assertTrue(spkrStats.lost == 0);
-        assertTrue(spkrStats.bad_seq == 0);
-        assertTrue(spkrStats.bad_seq == 0);
-        assertTrue(spkrStats.bad_content == 0);
+        assertEquals(spkrStats.lost, 6);
+        assertEquals(spkrStats.bad_seq, 0);
+        assertEquals(spkrStats.bad_seq, 0);
+        assertEquals(spkrStats.bad_content, 0);
     }
 }

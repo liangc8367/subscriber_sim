@@ -129,8 +129,18 @@ public class SpkrNoiseSim implements SignalSink{
         ByteBuffer data = mJitterBuffer.poll();
         if(data == null){
             ++mStats.lost;
+            ++mStats.consecutive_lost;
+            if( mStats.consecutive_lost == JITTER_DEPTH ){
+                stop(); // done with this session
+            }
         } else {
             validateData(data);
+            if(mStats.consecutive_lost != 0){
+                if(mStats.consecutive_lost > mStats.max_consecutive_lost){
+                    mStats.max_consecutive_lost = mStats.consecutive_lost;
+                }
+                mStats.consecutive_lost = 0;
+            }
         }
         ++mSequence;
     }
@@ -155,6 +165,8 @@ public class SpkrNoiseSim implements SignalSink{
 
     public static class Stats{
         public int lost = 0;
+        public int consecutive_lost = 0;
+        public int max_consecutive_lost = 0;
         public int bad_size = 0;
         public int bad_seq = 0; // bad sequence number
         public int bad_content = 0; // bad content, without looking at the 1st short

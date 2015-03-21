@@ -24,14 +24,16 @@ public class Main {
      */
     public static void main(String[] args) {
         System.out.println("subscriber simulator.");
-        if( args.length != 1){
-            System.err.println("syntax: simulator [suid]");
+        if( args.length != 2){
+            System.err.println("syntax: simulator [suid] [default-grp]");
             System.exit(-1);
         }
 
         long suid = -1;
+        long grpid = -1;
         try{
             suid = Long.parseLong(args[0]);
+            grpid = Long.parseLong(args[1]);
         } catch (Exception e){
             System.err.println("Ex: " + e);
             System.exit(-1);
@@ -59,6 +61,7 @@ public class Main {
         ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
         Configuration config = new Configuration();
         config.mSuid = suid;
+        config.mTgtid = grpid;
 
         SignalSource mic = new DummyMic();
         SignalSink spkr = new DummySpkr();

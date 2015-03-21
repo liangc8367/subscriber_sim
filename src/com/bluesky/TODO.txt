@@ -7,4 +7,12 @@
 
 2. mic simulator? (just replay recorded file?)
 3. spkr simulator? (just to record incoming data?)
+- generate noise and validate it (done, Mar 21)
 
+4. test harness (started on Mar 21)
+-
+- monkey to press/release ptt randomly
+- zoo: a group of monkey
+- farmer:
+   # create subscribers
+   # gather/validate stats and ongoing call info from each subscriber
