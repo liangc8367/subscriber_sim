@@ -56,6 +56,7 @@ public class StateOnlineTest {
         Mockito.reset(clock);
 
         config.mSuid = 100;
+        config.mTgtid = 9000;
         su = new Subscriber(config, executor, mic, spkr, udpService, clock, logger);
         SubscriberPeeper peeper = new SubscriberPeeper();
         peeper.setState(su, State.ONLINE);
@@ -91,6 +92,8 @@ public class StateOnlineTest {
         stateOnline.ptt(true);
         SubscriberPeeper peeper = new SubscriberPeeper();
         assertEquals(State.TX_INIT, peeper.peepState(su));
+        assertEquals(config.mTgtid, peeper.peepCallInfo(su).mTargetId);
+        assertEquals(config.mSuid, peeper.peepCallInfo(su).mSourceId);
     }
 
     @Test
@@ -109,8 +112,8 @@ public class StateOnlineTest {
         SubscriberPeeper peeper= new SubscriberPeeper();
         assertEquals(State.RX, peeper.peepState(su));
 
-        assertEquals(peeper.peepCallInfo(su).mTargetId, tgt);
-        assertEquals(peeper.peepCallInfo(su).mSourceId, src);
+        assertEquals(tgt, peeper.peepCallInfo(su).mTargetId);
+        assertEquals(src, peeper.peepCallInfo(su).mSourceId);
     }
 
     @Test
@@ -129,8 +132,8 @@ public class StateOnlineTest {
         SubscriberPeeper peeper= new SubscriberPeeper();
         assertEquals(State.CALL_HANG, peeper.peepState(su));
 
-        assertEquals(peeper.peepCallInfo(su).mTargetId, tgt);
-        assertEquals(peeper.peepCallInfo(su).mSourceId, src);
+        assertEquals(tgt, peeper.peepCallInfo(su).mTargetId);
+        assertEquals(src, peeper.peepCallInfo(su).mSourceId);
     }
 
     @Test
@@ -152,8 +155,8 @@ public class StateOnlineTest {
 
         SubscriberPeeper peeper= new SubscriberPeeper();
         assertEquals(State.RX, peeper.peepState(su));
-        assertEquals(peeper.peepCallInfo(su).mTargetId, tgt);
-        assertEquals(peeper.peepCallInfo(su).mSourceId, src);
+        assertEquals(tgt, peeper.peepCallInfo(su).mTargetId);
+        assertEquals(src, peeper.peepCallInfo(su).mSourceId);
     }
 
 }

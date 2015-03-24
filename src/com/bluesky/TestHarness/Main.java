@@ -25,6 +25,15 @@ public class Main {
         Farmer farmer = new Farmer(database);
         farmer.start();
 
+        try{
+            Thread.currentThread().sleep(5000);
+        } catch (InterruptedException e){
+
+        }
+
+        Monkey monkey = new Monkey(farmer.getSubscribers());
+        monkey.start();
+
         while(true) {
             try {
                 Thread.currentThread().sleep(1000); //

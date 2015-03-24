@@ -1,5 +1,6 @@
 package com.bluesky.core.subscriber;
 
+import com.bluesky.core.dsp.SignalModule;
 import com.bluesky.core.dsp.SignalSink;
 import com.bluesky.core.dsp.SignalSource;
 import com.bluesky.common.*;
@@ -21,11 +22,22 @@ public class Subscriber {
         public void stateChanged(State newState);
     }
 
+    /** ctor, register callbacks from mic & spkr, (but not udpService)
+     *
+     * @param config
+     * @param executor
+     * @param mic
+     * @param spkr
+     * @param udpService
+     * @param clock
+     * @param logger
+     */
     public Subscriber(Configuration config, ScheduledExecutorService executor,
                       SignalSource mic, SignalSink spkr,
                       UDPService udpService, ReferenceClock clock,
                       OLog logger)
     {
+        TAG = "Su[" + config.mSuid +"]";
         mConfig = config;
         mMic = mic;
         mSpkr = spkr;
@@ -34,6 +46,8 @@ public class Subscriber {
         mExecutor = executor;
         mClock = clock;
         initializeSM();
+
+        connectDsp();
     }
 
     public void start(){
@@ -104,6 +118,10 @@ public class Subscriber {
         return mCallInfo;
     }
 
+    public final Configuration getConfig(){
+        return mConfig;
+    }
+
     private void saveStateContext(){
         mStateOrig = mState;
     }
@@ -116,6 +134,30 @@ public class Subscriber {
                 mStateListener.stateChanged(mState);
             }
         }
+    }
+
+    /** register sub with dsp modules(i.e. spkr, mic)
+     *
+     */
+    private void connectDsp(){
+        mMic.register(new SignalSource.DataAvailableHandler() {
+           @Override
+           public void dataAvailable(ByteBuffer byteBuffer) {
+               Subscriber.this.micDataAvailable(byteBuffer);
+           }
+        });
+        mMic.register(new SignalModule.Listener() {
+            @Override
+            public void onEndOfLife() {
+                Subscriber.this.txEnd();
+            }
+        });
+        mSpkr.register(new SignalModule.Listener() {
+            @Override
+            public void onEndOfLife() {
+                Subscriber.this.rxEnd();
+            }
+        });
     }
 
     /** send registration */
@@ -221,7 +263,7 @@ public class Subscriber {
     final UDPService mUdpSvc;
     final OLog mLogger;
     final ReferenceClock mClock;
-    final static String TAG = "Su";
+    String TAG;
 
     /////////////// attributes /////////////////////////
     short mSeqNumber = 0;

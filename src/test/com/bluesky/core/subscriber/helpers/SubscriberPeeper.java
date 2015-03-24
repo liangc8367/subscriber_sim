@@ -39,6 +39,10 @@ public class SubscriberPeeper {
         return (CallInformation) fieldCallInfo.get(sub);
     }
 
+    public void setCallInfo(Subscriber sub, CallInformation callInfo) throws Exception {
+        fieldCallInfo.set(sub, callInfo);
+    }
+
     public void setFirstCallSeq(Subscriber sub, short seq) throws Exception {
         fieldFirstCallSeq.set(sub, seq);
     }

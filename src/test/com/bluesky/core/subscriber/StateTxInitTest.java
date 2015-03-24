@@ -69,6 +69,11 @@ public class StateTxInitTest {
         SubscriberPeeper peeper = new SubscriberPeeper();
         peeper.setState(su, State.TX_INIT);
 
+        CallInformation callInfo = new CallInformation();
+        callInfo.mSourceId = config.mSuid;
+        callInfo.mTargetId = config.mTgtid;
+        peeper.setCallInfo(su, callInfo);
+
         stateTxInit = new StateTxInit(su);
     }
 
@@ -80,7 +85,7 @@ public class StateTxInitTest {
      */
 
     @Test
-    public void test_txinit_send_3_callInit_rxed_none() throws Exception {
+    public void test_txinit_send_3_callInit_rxed_none_b4_20msx3() throws Exception {
         setup();
 
         stateTxInit.entry();
@@ -88,24 +93,27 @@ public class StateTxInitTest {
         stateTxInit.fineTimerExpired();
         stateTxInit.fineTimerExpired();
 
-        Mockito.verify(executor, times(2)).
+        Mockito.verify(executor, times(3)).
                 schedule(any(Runnable.class), leq(GlobalConstants.CALL_PACKET_INTERVAL), eq(TimeUnit.MILLISECONDS));
         Mockito.verify(udpService, times(3)).send((ByteBuffer) argThat(
                 new PayloadMatcher(
                         config.mTgtid,
                         config.mSuid,
                         CallInit.class)));
-
         SubscriberPeeper peeper = new SubscriberPeeper();
+        assertEquals(State.TX_INIT, peeper.peepState(su));
+
+        stateTxInit.fineTimerExpired();
         assertEquals(State.ONLINE, peeper.peepState(su));
     }
 
     @Test
-    public void test_txinit_send_3_callInit_rxed_callInit_self() throws Exception {
+    public void test_txinit_send_3_callInit_rxed_callInit_self_b4_20msx3() throws Exception {
         setup();
 
         stateTxInit.entry();
 
+        stateTxInit.fineTimerExpired();
         stateTxInit.fineTimerExpired();
 
         short seq = 20;
@@ -117,7 +125,7 @@ public class StateTxInitTest {
 
         stateTxInit.fineTimerExpired();
 
-        Mockito.verify(executor, times(2)).
+        Mockito.verify(executor, times(3)).
                 schedule(any(Runnable.class), leq(GlobalConstants.CALL_PACKET_INTERVAL), eq(TimeUnit.MILLISECONDS));
         Mockito.verify(udpService, times(3)).send((ByteBuffer) argThat(
                 new PayloadMatcher(
@@ -130,7 +138,7 @@ public class StateTxInitTest {
     }
 
     @Test
-    public void test_txinit_send_3_callInit_rxed_callInit_other() throws Exception {
+    public void test_txinit_send_2_callInit_rxed_callInit_other() throws Exception {
         setup();
 
         stateTxInit.entry();
@@ -161,7 +169,7 @@ public class StateTxInitTest {
     }
 
     @Test
-    public void test_txinit_send_3_callInit_rxed_callData() throws Exception {
+    public void test_txinit_send_2_callInit_rxed_callData() throws Exception {
         setup();
 
         stateTxInit.entry();
@@ -194,7 +202,7 @@ public class StateTxInitTest {
     }
 
     @Test
-    public void test_txinit_send_3_callInit_rxed_callTerm() throws Exception {
+    public void test_txinit_send_2_callInit_rxed_callTerm() throws Exception {
         setup();
 
         stateTxInit.entry();
@@ -224,5 +232,28 @@ public class StateTxInitTest {
 
     }
 
+    @Test
+    public void test_txinit_send_2_callInit_ptt_released() throws Exception {
+        setup();
+
+        stateTxInit.entry();
+
+        stateTxInit.fineTimerExpired();
+
+        stateTxInit.ptt(false);
+
+        Mockito.verify(executor, times(2)).
+                schedule(any(Runnable.class), leq(GlobalConstants.CALL_PACKET_INTERVAL), eq(TimeUnit.MILLISECONDS));
+        Mockito.verify(udpService, times(2)).send((ByteBuffer) argThat(
+                new PayloadMatcher(
+                        config.mTgtid,
+                        config.mSuid,
+                        CallInit.class)));
+
+        SubscriberPeeper peeper = new SubscriberPeeper();
+        assertEquals(State.TX_STOPPING, peeper.peepState(su));
+        assertEquals(peeper.peepCallInfo(su).mTargetId, config.mTgtid);
+        assertEquals(peeper.peepCallInfo(su).mSourceId, config.mSuid);
+    }
 
 }

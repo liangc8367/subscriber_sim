@@ -17,6 +17,7 @@ import java.util.concurrent.TimeUnit;
  * - callInit: from others, to callRxing
  * - callTerm: to callhang
  * - callData: from others, to callRxing
+ * - ptt release: send callTerm, and to callhang
  */
 public class StateTxInit extends StateNode{
     public StateTxInit(Subscriber sub){
@@ -37,6 +38,12 @@ public class StateTxInit extends StateNode{
     public void exit() {
         mSub.mLogger.d(mSub.TAG, "exit call init");
         mSub.cancelFineTimer();
+    }
+
+    @Override
+    public void ptt(boolean pressed) {
+        mSub.mLogger.d(mSub.TAG, "ptt released");
+        mSub.mState = State.TX_STOPPING;
     }
 
     @Override
@@ -75,7 +82,6 @@ public class StateTxInit extends StateNode{
 
     @Override
     public void fineTimerExpired() {
-        mSub.sendCallInit();
         int numSent = mSub.mSeqNumber + 1 - mSub.mFirstPktSeqNumber;
         if( numSent >= 3 ){
             mSub.mLogger.d(mSub.TAG, "we've sent " + numSent +" callInit" + ", channel granted=" + mbChannelGranted);
@@ -85,6 +91,8 @@ public class StateTxInit extends StateNode{
                 mSub.mState = State.ONLINE;
             }
         } else {
+            mSub.sendCallInit();
+            numSent = mSub.mSeqNumber + 1 - mSub.mFirstPktSeqNumber;
             mSub.mLogger.d(mSub.TAG, "tx timer timed out, " + numSent);
             rearmTxTimer();
         }

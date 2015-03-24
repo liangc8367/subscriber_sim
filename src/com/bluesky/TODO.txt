@@ -16,3 +16,13 @@
 - farmer:
    # create subscribers
    # gather/validate stats and ongoing call info from each subscriber
+- monkey (single press, single sub)
+   # issue: trunk side: unexpected sender (fixed, shall validate-packet using 'equals', rather than ==)
+   # issue: rx listener su rxed (invalid packet)? strange (fixed, protocol helper cosmetic bug)
+   # issue: tx su: send packet or not? (fixed, forgot to register mic/spkr)
+   # issue: quick release ptt in TxInit (fixed, ut tested)
+   # issue: fixed: ptt shall set callInfo as default one
+   # issue: tx-init: validate call granted after timer expired 3 times (fixed.)
+       # issue: negative delay? (send dummy mic data as the 1st audio packet)
+   # issue: call-hang: use count down count as payload so all listeners can know when the expected due time
+   # issue: (not an issue) why all Subs returned to offline? (time out after 5 mins)

@@ -12,10 +12,12 @@ import java.util.concurrent.TimeUnit;
 
 /** online state, idle
  *  - ptt pressed: transit to call init state
- *  - pkt rxed, callInit: transit to call rxing state
- *  - ptk rxed, callData: transit to call rxing state
- *  - pkt rxed, callTerm, transit to call hang state
- *  - ptt: to TxInit
+ *  - pkt rxed, callInit: transit to call rxing state, except from self
+ *  - ptk rxed, callData: transit to call rxing state, except from self
+ *  - pkt rxed, callTerm, transit to call hang state, except from self
+ *  - pkt rxed (from self)<== must be lingering pkt, response with callTerm (so trunk mgr can
+ *              start callhang process
+ *  - ptt: to TxInit (using default configuration)
  *
  *  - keepalive timer expired: return to offline
  *
@@ -42,6 +44,7 @@ public class StateOnline extends StateNode {
     public void ptt(boolean pressed) {
         if(pressed) {
             mSub.mLogger.d(mSub.TAG, "ptt pressed");
+            mSub.recordCallInfo(mSub.mConfig.mTgtid, mSub.mConfig.mSuid);
             mSub.mState = State.TX_INIT;
         }
     }
@@ -51,6 +54,10 @@ public class StateOnline extends StateNode {
         mSub.mLogger.d(mSub.TAG, "rxed: " + ProtocolHelpers.peepProtocol(packet));
         //TODO: to validate packet source and seq
         ProtocolBase proto = ProtocolFactory.getProtocol(packet);
+        if( proto.getSource() == mSub.mConfig.mSuid ){
+            mSub.mLogger.d(mSub.TAG, "rxed self lingering pkt");
+            mSub.sendCallTerm();
+        }
         switch( proto.getType()){
             case ProtocolBase.PTYPE_CALL_INIT:
                 mSub.mLogger.d(mSub.TAG, "rxed callInit");
