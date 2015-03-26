@@ -211,7 +211,8 @@ public class StateTxInitTest {
 
         long alian = 200;
         short seq = 20;
-        CallTerm callTerm = new CallTerm(config.mTgtid, alian, seq);
+        short countdown = 9;
+        CallTerm callTerm = new CallTerm(config.mTgtid, alian, seq, countdown);
         ByteBuffer payload = ByteBuffer.allocate(callTerm.getSize());
         callTerm.serialize(payload);
         DatagramPacket pkt = new DatagramPacket(payload.array(), payload.capacity());
@@ -227,8 +228,9 @@ public class StateTxInitTest {
 
         SubscriberPeeper peeper = new SubscriberPeeper();
         assertEquals(State.CALL_HANG, peeper.peepState(su));
-        assertEquals(peeper.peepCallInfo(su).mTargetId, config.mTgtid);
-        assertEquals(peeper.peepCallInfo(su).mSourceId, alian);
+        assertEquals(config.mTgtid, peeper.peepCallInfo(su).mTargetId);
+        assertEquals(alian, peeper.peepCallInfo(su).mSourceId);
+        assertEquals(countdown, peeper.peepCountdown(su));
 
     }
 

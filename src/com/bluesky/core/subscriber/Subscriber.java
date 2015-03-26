@@ -193,7 +193,8 @@ public class Subscriber {
         CallTerm callTerm = new CallTerm(
                 mConfig.mTgtid,
                 mConfig.mSuid,
-                ++mSeqNumber
+                ++mSeqNumber,
+                GlobalConstants.CALL_HANG_COUNTDOWN // SU always uses fixed value
         );
         ByteBuffer payload = ByteBuffer.allocate(callTerm.getSize());
         callTerm.serialize(payload);
@@ -267,7 +268,7 @@ public class Subscriber {
 
     /////////////// attributes /////////////////////////
     short mSeqNumber = 0;
-    short mFirstPktSeqNumber, mLastPktSeqNumber;
+    short mFirstPktSeqNumber, mLastPktSeqNumber, mCallTermCountdown;
     long mFirstPktTime; // in milliseconds
 
 

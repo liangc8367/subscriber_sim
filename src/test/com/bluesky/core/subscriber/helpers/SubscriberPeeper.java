@@ -25,6 +25,10 @@ public class SubscriberPeeper {
 
         fieldSeqNumber = Subscriber.class.getDeclaredField("mSeqNumber");
         fieldSeqNumber.setAccessible(true);
+
+        fieldCountdown = Subscriber.class.getDeclaredField("mCallTermCountdown");
+        fieldCountdown.setAccessible(true);
+
     }
 
     public State peepState(Subscriber sub) throws Exception{
@@ -55,5 +59,13 @@ public class SubscriberPeeper {
         fieldSeqNumber.set(sub, seq);
     }
 
-    private Field fieldState, fieldCallInfo, fieldFirstCallSeq, fieldFirstCallTime, fieldSeqNumber;
+    public short peepCountdown(Subscriber sub) throws Exception {
+        return (Short) fieldCountdown.get(sub);
+    }
+
+    public void setCountdown(Subscriber sub, short countdown) throws Exception {
+        fieldCountdown.set(sub, countdown);
+    }
+
+    private Field fieldState, fieldCallInfo, fieldFirstCallSeq, fieldFirstCallTime, fieldSeqNumber, fieldCountdown;
 }

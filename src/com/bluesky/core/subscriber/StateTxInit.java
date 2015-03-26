@@ -3,10 +3,7 @@ package com.bluesky.core.subscriber;
 import com.bluesky.common.GlobalConstants;
 import com.bluesky.common.NamedTimerTask;
 import com.bluesky.common.ProtocolHelpers;
-import com.bluesky.protocol.CallData;
-import com.bluesky.protocol.CallInit;
-import com.bluesky.protocol.ProtocolBase;
-import com.bluesky.protocol.ProtocolFactory;
+import com.bluesky.protocol.*;
 
 import java.net.DatagramPacket;
 import java.util.concurrent.TimeUnit;
@@ -75,6 +72,7 @@ public class StateTxInit extends StateNode{
             case ProtocolBase.PTYPE_CALL_TERM:
                 mSub.mLogger.d(mSub.TAG, "rxed callTerm");
                 mSub.recordCallInfo(proto.getTarget(), proto.getSource());
+                mSub.mCallTermCountdown = ((CallTerm)proto).getCountdown();
                 mSub.mState = State.CALL_HANG;
                 break;
         }

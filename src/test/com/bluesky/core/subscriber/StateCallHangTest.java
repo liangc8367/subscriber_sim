@@ -57,6 +57,7 @@ public class StateCallHangTest {
     Subscriber su;
     StateCallHang stateCallHang;
     long tgt = 1000, src = 200;
+    short orig_countdown = 20;
 
     private void setup() throws Exception {
         Mockito.reset(udpService);
@@ -68,6 +69,7 @@ public class StateCallHangTest {
         peeper.setState(su, State.CALL_HANG);
         peeper.peepCallInfo(su).mSourceId = config.mSuid;
         peeper.peepCallInfo(su).mTargetId = tgt;
+        peeper.setCountdown(su, orig_countdown);
 
         stateCallHang = new StateCallHang(su);
     }
@@ -85,7 +87,9 @@ public class StateCallHangTest {
         setup();
         stateCallHang.entry();
         Mockito.verify(executor, times(1)).
-                schedule(any(Runnable.class), eq(GlobalConstants.CALL_HANG_PERIOD), eq(TimeUnit.MILLISECONDS) );
+                schedule(any(Runnable.class),
+                        eq(orig_countdown * GlobalConstants.CALL_PACKET_INTERVAL),
+                        eq(TimeUnit.MILLISECONDS) );
         stateCallHang.ptt(true);
         SubscriberPeeper peeper = new SubscriberPeeper();
         assertEquals(State.TX_INIT, peeper.peepState(su));
@@ -138,7 +142,8 @@ public class StateCallHangTest {
 
         long alien = 300;
         short seq = 20;
-        CallTerm callTerm = new CallTerm(tgt, alien, seq);
+        short countdown = 9;
+        CallTerm callTerm = new CallTerm(tgt, alien, seq, countdown);
         ByteBuffer payload = ByteBuffer.allocate(callTerm.getSize());
         callTerm.serialize(payload);
         DatagramPacket pkt = new DatagramPacket(payload.array(), payload.capacity());
@@ -149,6 +154,12 @@ public class StateCallHangTest {
 
         assertEquals(peeper.peepCallInfo(su).mTargetId, tgt);
         assertEquals(peeper.peepCallInfo(su).mSourceId, alien);
+        assertEquals(countdown, peeper.peepCountdown(su));
+
+        Mockito.verify(executor, times(1)).
+                schedule(any(Runnable.class),
+                        eq(countdown * GlobalConstants.CALL_PACKET_INTERVAL),
+                        eq(TimeUnit.MILLISECONDS));
     }
 
     @Test
@@ -157,7 +168,8 @@ public class StateCallHangTest {
         stateCallHang.entry();
 
         short seq = 20;
-        CallTerm callTerm = new CallTerm(tgt, src, seq);
+        short countdown = 9;
+        CallTerm callTerm = new CallTerm(tgt, src, seq, countdown);
         ByteBuffer payload = ByteBuffer.allocate(callTerm.getSize());
         callTerm.serialize(payload);
         DatagramPacket pkt = new DatagramPacket(payload.array(), payload.capacity());
@@ -168,6 +180,13 @@ public class StateCallHangTest {
 
         assertEquals(peeper.peepCallInfo(su).mTargetId, tgt);
         assertEquals(peeper.peepCallInfo(su).mSourceId, src);
+        assertEquals(countdown, peeper.peepCountdown(su));
+
+        Mockito.verify(executor, times(1)).
+                schedule(any(Runnable.class),
+                        eq(countdown * GlobalConstants.CALL_PACKET_INTERVAL),
+                        eq(TimeUnit.MILLISECONDS) );
+
     }
 
     @Test

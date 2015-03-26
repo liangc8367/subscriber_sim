@@ -4,6 +4,7 @@ import com.bluesky.common.GlobalConstants;
 import com.bluesky.common.NamedTimerTask;
 import com.bluesky.common.ProtocolHelpers;
 import com.bluesky.protocol.CallData;
+import com.bluesky.protocol.CallTerm;
 import com.bluesky.protocol.ProtocolBase;
 import com.bluesky.protocol.ProtocolFactory;
 
@@ -15,7 +16,7 @@ import java.util.concurrent.TimeUnit;
  *  - callTerm: remain in call hang (trunking mgr should broadcase callTerm during this period)
  *  - callData: validate, and to call rxing
  *  - ptt: to callInit
- *  - timeout: to idle/online (after last hang period following last callTerm)
+ *  - monitor callTerm from trunk-mgr, and go idle if countdown reaches 0.
  */
 public class StateCallHang extends StateNode {
     public StateCallHang(Subscriber sub){
@@ -25,9 +26,7 @@ public class StateCallHang extends StateNode {
     @Override
     public void entry() {
         mSub.mLogger.d(mSub.TAG, "enter Hang");
-        mSub.mScheduledCoarseTimer = mSub.mExecutor.schedule(mSub.mCoarseTimer,
-                GlobalConstants.CALL_HANG_PERIOD,
-                TimeUnit.MILLISECONDS); //hmm... should be 20ms*x, x<5
+        armTimer();
     }
 
     @Override
@@ -46,7 +45,7 @@ public class StateCallHang extends StateNode {
 
     @Override
     public void coarseTimerExpired() {
-        mSub.mLogger.d(mSub.TAG, "hang gard timed out");
+        mSub.mLogger.d(mSub.TAG, "flywheel timed out");
         mSub.mState = State.ONLINE;
     }
 
@@ -71,15 +70,23 @@ public class StateCallHang extends StateNode {
                 }
                 break;
             case ProtocolBase.PTYPE_CALL_TERM:
-                if(proto.getSource() != mSub.mConfig.mSuid) {
-                    mSub.mLogger.d(mSub.TAG, "rxed callTerm");
-                    mSub.recordCallInfo(proto.getTarget(), proto.getSource());
+                mSub.recordCallInfo(proto.getTarget(), proto.getSource());
+                mSub.mCallTermCountdown = ((CallTerm)proto).getCountdown();
+                if( mSub.mCallTermCountdown == 0){
+                    mSub.mLogger.d(mSub.TAG, "count down reached zero");
+                    mSub.mState = State.ONLINE;
+                } else {
+                    mSub.cancelCoarseTimer();
+                    armTimer();
                 }
-                mSub.cancelCoarseTimer();
-                mSub.mScheduledCoarseTimer = mSub.mExecutor.schedule(
-                        mSub.mCoarseTimer, GlobalConstants.CALL_HANG_PERIOD, TimeUnit.MILLISECONDS);
                 break;
         }
+    }
+
+    private void armTimer(){
+        mSub.mScheduledCoarseTimer = mSub.mExecutor.schedule(mSub.mCoarseTimer,
+                mSub.mCallTermCountdown * GlobalConstants.CALL_PACKET_INTERVAL,
+                TimeUnit.MILLISECONDS);
     }
 
 }

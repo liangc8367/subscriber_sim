@@ -66,7 +66,8 @@ public class StateTxStoppingTest {
                 .thenReturn(250L) // entry, for first packet@100L, seq=1, last audio seq = 8
                 .thenReturn(261L) // sent #1
                 .thenReturn(283L) // sent #2
-                .thenReturn(301L); // sent #3
+                .thenReturn(301L) // sent #3
+                .thenReturn(322L); // 3rd interval
         config.mSuid = 100;
         config.mTgtid = 1000;
         su = new Subscriber(config, executor, mic, spkr, udpService, clock, logger);
@@ -76,16 +77,17 @@ public class StateTxStoppingTest {
         stateTxStopping = new StateTxStopping(su);
     }
 
-    /*
- *  - send 3 call term, in 20ms interval, and transit to call hang
- *  - callInit: to rx
- *  - callData: to rx
+/** tx stopping state, to send up to 3 call term, until rxed call-term from trunking mgr(src=0)
+ *  - send  at most 3 call term, in 20ms interval
+ *  - if rxed callTerm from trunking mgr(src==0), then transit to call hang
+ *  - if didn't rxed callterm from trunking mgr after 3 interval, then transit to idle
+ *  - if rxed following pkt from others (not self)
+ *  - callInit: to rx:
+ *  - callData: to rx:
  *  - callTerm: to callhang
- *  - call proto from self: ignore
-     */
-
+ */
     @Test
-    public void test_txinit_send_3_callTerm() throws Exception {
+    public void test_txinit_send_3_callTerm_no_callTerm_rxed() throws Exception {
         setup();
 
         SubscriberPeeper peeper = new SubscriberPeeper();
@@ -99,7 +101,7 @@ public class StateTxStoppingTest {
         stateTxStopping.fineTimerExpired();
         stateTxStopping.fineTimerExpired();
 
-        Mockito.verify(executor, times(3)).
+        Mockito.verify(executor, times(4)).
                 schedule(any(Runnable.class), leq(GlobalConstants.CALL_PACKET_INTERVAL), eq(TimeUnit.MILLISECONDS));
         Mockito.verify(udpService, times(3)).send((ByteBuffer) argThat(
                 new PayloadMatcher(
@@ -107,7 +109,12 @@ public class StateTxStoppingTest {
                         config.mSuid,
                         CallTerm.class)));
 
-        assertEquals(State.CALL_HANG, peeper.peepState(su));
+        assertEquals(State.TX_STOPPING, peeper.peepState(su));
+
+        stateTxStopping.fineTimerExpired();
+        assertEquals(State.ONLINE, peeper.peepState(su));
+
+
     }
 
     @Test
@@ -137,7 +144,7 @@ public class StateTxStoppingTest {
     }
 
     @Test
-    public void test_txinit_send_1_callTerm_rxed_callTerm() throws Exception {
+    public void test_txinit_send_1_callTerm_rxed_callTerm_from_trkmgr() throws Exception {
         setup();
 
         SubscriberPeeper peeper = new SubscriberPeeper();
@@ -149,9 +156,10 @@ public class StateTxStoppingTest {
 
         stateTxStopping.fineTimerExpired();
 
-        long target=2000, source = 200;
+        long target=2000, source = 0;
         short seq = 20;
-        CallTerm callTerm = new CallTerm(target, source, seq);
+        short countdown = 20;
+        CallTerm callTerm = new CallTerm(target, source, seq, countdown);
         ByteBuffer payload = ByteBuffer.allocate(callTerm.getSize());
         callTerm.serialize(payload);
         DatagramPacket pkt = new DatagramPacket(payload.array(), payload.capacity());
@@ -160,6 +168,7 @@ public class StateTxStoppingTest {
         assertEquals(State.CALL_HANG, peeper.peepState(su));
         assertEquals(target, peeper.peepCallInfo(su).mTargetId);
         assertEquals(source, peeper.peepCallInfo(su).mSourceId);
+        assertEquals(countdown, peeper.peepCountdown(su));
     }
 
     @Test

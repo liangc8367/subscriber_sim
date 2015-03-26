@@ -2,6 +2,7 @@ package com.bluesky.core.subscriber;
 
 import com.bluesky.common.ProtocolHelpers;
 import com.bluesky.protocol.CallData;
+import com.bluesky.protocol.CallTerm;
 import com.bluesky.protocol.ProtocolBase;
 import com.bluesky.protocol.ProtocolFactory;
 
@@ -53,6 +54,7 @@ public class StateRxing extends StateNode{
                 mSub.mLogger.d(mSub.TAG, "rxed callTerm");
                 ByteBuffer eof = ByteBuffer.allocate(0);
                 mSub.mSpkr.offer(eof, proto.getSequence());
+                mSub.mCallTermCountdown = ((CallTerm)proto).getCountdown();
                 break;
         }
     }

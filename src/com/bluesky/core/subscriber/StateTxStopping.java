@@ -4,17 +4,21 @@ import com.bluesky.common.GlobalConstants;
 import com.bluesky.common.NamedTimerTask;
 import com.bluesky.common.ProtocolHelpers;
 import com.bluesky.protocol.CallData;
+import com.bluesky.protocol.CallTerm;
 import com.bluesky.protocol.ProtocolBase;
 import com.bluesky.protocol.ProtocolFactory;
 
 import java.net.DatagramPacket;
 import java.util.concurrent.TimeUnit;
 
-/** tx stopping state
- *  - send 3 call term, in 20ms interval, and transit to call hang
- *  - callInit: to rx
- *  - callData: to rx
- *  - callTerm: to callhang
+/** tx stopping state, to send up to 3 call term, until rxed call-term from trunking mgr(src=0)
+ *  - send  at most 3 call term, in 20ms interval
+ *  - if rxed callTerm from trunking mgr(src==0), then transit to call hang
+ *  - if didn't rxed callterm from trunking mgr after 3 interval, then transit to idle
+ *  - if rxed following pkt from others (not self)
+ *  - callInit: to rx:
+ *  - callData: to rx:
+ *  - callTerm: update countdown, and transit to callhang
  */
 public class StateTxStopping extends StateNode {
 
@@ -36,12 +40,13 @@ public class StateTxStopping extends StateNode {
 
     @Override
     public void fineTimerExpired() {
-        mSub.sendCallTerm();
         int numSent = mSub.mSeqNumber - mSub.mLastPktSeqNumber;
         if( numSent >= 3 ){
             mSub.mLogger.d(mSub.TAG, "we've sent " + numSent +" callTerm");
-            mSub.mState = State.CALL_HANG;
+            mSub.mState = State.ONLINE;
         } else {
+            mSub.sendCallTerm();
+            numSent = mSub.mSeqNumber - mSub.mLastPktSeqNumber;
             mSub.mLogger.d(mSub.TAG, "tx timer timed out, " + numSent);
             rearmTxTimer();
         }
@@ -71,6 +76,7 @@ public class StateTxStopping extends StateNode {
             case ProtocolBase.PTYPE_CALL_TERM:
                 mSub.mLogger.d(mSub.TAG, "rxed callTerm");
                 mSub.recordCallInfo(proto.getTarget(), proto.getSource());
+                mSub.mCallTermCountdown = ((CallTerm)proto).getCountdown();
                 mSub.mState = State.CALL_HANG;
                 break;
         }

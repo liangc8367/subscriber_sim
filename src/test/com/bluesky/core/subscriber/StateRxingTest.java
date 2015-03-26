@@ -10,6 +10,7 @@ import com.bluesky.core.hal.ReferenceClock;
 import com.bluesky.core.subscriber.*;
 import com.bluesky.protocol.CallData;
 import com.bluesky.protocol.CallTerm;
+import junit.framework.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -126,6 +127,7 @@ public class StateRxingTest {
 
         long tgt = 1000, src = 200;
         short seq = 20;
+        short countdown = 9;
 
         // setup present call information to Subscriber
         SubscriberPeeper peeper = new SubscriberPeeper();
@@ -136,13 +138,14 @@ public class StateRxingTest {
         stateRxing.entry();
 
         //
-        CallTerm callTerm = new CallTerm(tgt, src, seq);
+        CallTerm callTerm = new CallTerm(tgt, src, seq, countdown);
         ByteBuffer payload = ByteBuffer.allocate(callTerm.getSize());
         callTerm.serialize(payload);
         DatagramPacket pkt = new DatagramPacket(payload.array(), payload.capacity());
 
         stateRxing.packetReceived(pkt);
         Mockito.verify(spkr, times(1)).offer(any(ByteBuffer.class), eq(seq));
+        assertEquals(countdown, peeper.peepCountdown(su));
 
     }
 
@@ -152,24 +155,28 @@ public class StateRxingTest {
 
         long tgt = 1000, src = 200;
         short seq = 20;
+        short countdown = 9;
+        short orig_countdown = 99;
 
         // setup present call information to Subscriber
         SubscriberPeeper peeper = new SubscriberPeeper();
         CallInformation callInfo = peeper.peepCallInfo(su);
         callInfo.mTargetId = tgt;
         callInfo.mSourceId = src;
+        peeper.setCountdown(su, orig_countdown);
 
         stateRxing.entry();
 
         //
         long alian = 2000;
-        CallTerm callTerm = new CallTerm(alian, src, seq);
+        CallTerm callTerm = new CallTerm(alian, src, seq, countdown);
         ByteBuffer payload = ByteBuffer.allocate(callTerm.getSize());
         callTerm.serialize(payload);
         DatagramPacket pkt = new DatagramPacket(payload.array(), payload.capacity());
 
         stateRxing.packetReceived(pkt);
         Mockito.verify(spkr, times(0)).offer(any(ByteBuffer.class), eq(seq));
+        assertEquals(orig_countdown, peeper.peepCountdown(su));
     }
 
     @Test

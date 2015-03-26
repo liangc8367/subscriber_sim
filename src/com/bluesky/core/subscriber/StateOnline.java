@@ -4,6 +4,7 @@ import com.bluesky.common.GlobalConstants;
 import com.bluesky.common.NamedTimerTask;
 import com.bluesky.common.ProtocolHelpers;
 import com.bluesky.protocol.CallData;
+import com.bluesky.protocol.CallTerm;
 import com.bluesky.protocol.ProtocolBase;
 import com.bluesky.protocol.ProtocolFactory;
 
@@ -72,6 +73,7 @@ public class StateOnline extends StateNode {
                 break;
             case ProtocolBase.PTYPE_CALL_TERM:
                 mSub.mLogger.d(mSub.TAG, "rxed callTerm");
+                mSub.mCallTermCountdown = ((CallTerm)proto).getCountdown();
                 mSub.recordCallInfo(proto.getTarget(), proto.getSource());
                 mSub.mState = State.CALL_HANG;
                 break;

@@ -17,7 +17,7 @@ public class PayloadMatcher extends ArgumentMatcher {
         this.cls = cls;
     }
     public boolean matches(Object payload) {
-        ByteBuffer pload = (ByteBuffer) ((Buffer) payload).flip();
+        ByteBuffer pload = (ByteBuffer) ((Buffer) payload).rewind();
         ProtocolBase proto = ProtocolFactory.getProtocol(pload);
         return (proto.getTarget() == target && proto.getSource() == source && proto.getClass() == cls);
     }

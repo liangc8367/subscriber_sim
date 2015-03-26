@@ -123,7 +123,8 @@ public class StateOnlineTest {
 
         long tgt = 1000, src = 200;
         short seq = 20;
-        CallTerm callTerm = new CallTerm(tgt, src, seq);
+        short countdown = 9;
+        CallTerm callTerm = new CallTerm(tgt, src, seq, countdown);
         ByteBuffer payload = ByteBuffer.allocate(callTerm.getSize());
         callTerm.serialize(payload);
         DatagramPacket pkt = new DatagramPacket(payload.array(), payload.capacity());
@@ -134,6 +135,7 @@ public class StateOnlineTest {
 
         assertEquals(tgt, peeper.peepCallInfo(su).mTargetId);
         assertEquals(src, peeper.peepCallInfo(su).mSourceId);
+        assertEquals(countdown, peeper.peepCountdown(su));
     }
 
     @Test
