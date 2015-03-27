@@ -217,4 +217,22 @@ public class ScheduledExecutorServiceTest {
         assertEquals(0, su.mCoarseTimerCount);
 
     }
+
+    @Test
+    public void testScheduledExecutorSvc_min_delay() throws Exception {
+
+        ScheduledExecutorService exec = Executors.newSingleThreadScheduledExecutor();
+
+        exec.schedule( new Runnable(){
+
+            @Override
+            public void run() {
+                System.out.println("done");
+            }
+        }, 1, TimeUnit.MILLISECONDS);
+
+        boolean result = exec.awaitTermination(5L, TimeUnit.SECONDS);
+        assertEquals(true, result);
+
+    }
 }

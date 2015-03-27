@@ -56,6 +56,9 @@ public class StateTxInit extends StateNode{
                     if( callInit.getTarget() == mSub.mConfig.mTgtid ) {
                         mSub.mLogger.d(mSub.TAG, "rxed callInit, initiated from myself");
                         mbChannelGranted = true;
+                        if(++mTestCount > 10){
+                            mSub.mLogger.d(mSub.TAG, "!!!");
+                        }
                     }
                 } else {
                     mSub.mLogger.d(mSub.TAG, "rxed callInit from other");
@@ -103,9 +106,8 @@ public class StateTxInit extends StateNode{
         if(delay < 0) {
             mSub.mLogger.w(mSub.TAG, "negative delay:" + delay);
             delay = 1;
-        } else {
-            mSub.mScheduledFineTimer = mSub.mExecutor.schedule(mSub.mFineTimer, delay, TimeUnit.MILLISECONDS);
         }
+        mSub.mScheduledFineTimer = mSub.mExecutor.schedule(mSub.mFineTimer, delay, TimeUnit.MILLISECONDS);
     }
 
     private void rearmTxTimer(){
@@ -114,4 +116,6 @@ public class StateTxInit extends StateNode{
     }
 
     private boolean mbChannelGranted;
+
+    private int mTestCount = 0;
 }

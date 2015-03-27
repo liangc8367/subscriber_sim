@@ -26,3 +26,13 @@
        # issue: negative delay? (send dummy mic data as the 1st audio packet)
    # issue: (fixed at SU side) call-hang: use count down count as payload so all listeners can know when the expected due time
    # issue: (not an issue) why all Subs returned to offline? (time out after 5 mins)
+   # issue: su, spkr-sim shall be able to detect call-term
+   # issue: su, online state, after rxed echo from trunk mgr, su shall be able to inform trunk mgr the end of such call
+   # issue: considering to redesign signaling: call-init:
+      - su: send 3 call-init in 40ms(20ms interval), then wait up to 60ms;
+      - or, send one call-init, wait 40ms, and try 3 times. (call setup time will be 120ms)
+      - at trunk-mgr side, once rxed call-init request, broadcast channel-arbitration (call-init) at downlink for 120ms,
+        if no call-data is received, then tear down the reservation.
+      - su: tear down the call, send call term, try up to 3 times, either go to call-hang if rxed call-term, or go to
+        idle if no call-term is rxed.
+      - su: call data: use the 1st data as the base time.
